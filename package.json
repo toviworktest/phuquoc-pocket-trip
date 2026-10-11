@@ -7,7 +7,7 @@
   },
   "scripts": {
     "build": "node scripts/build-web.mjs",
-    "test": "node --test backend/tests/worker.test.mjs tests/pages.test.mjs",
+    "test": "node --test backend/tests/worker.test.mjs tests/*.test.mjs",
     "preview": "node scripts/preview.mjs"
   },
   "dependencies": {
