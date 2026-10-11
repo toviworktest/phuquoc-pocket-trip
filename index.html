@@ -1,0 +1,140 @@
+<!doctype html>
+<html lang="ko">
+<head>
+ <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+ <meta name="robots" content="noindex,nofollow"><meta name="theme-color" content="#b6d7cc"><title>우리의 푸꾸옥 · 포켓트립</title>
+ <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath fill='%23b6d7cc' d='M0 0h16v16H0z'/%3E%3Cpath fill='%23715b83' d='M3 3h4v2h2V3h4v2h2v5h-2v2h-2v2H5v-2H3v-2H1V5h2z'/%3E%3Cpath fill='%23f5b0c5' d='M3 5h4v2h2V5h4v5h-2v2H5v-2H3z'/%3E%3C/svg%3E">
+ <link rel="stylesheet" href="vendor/leaflet.css"><link rel="stylesheet" href="style.css"><link rel="stylesheet" href="map.css"><link rel="stylesheet" href="ui.css">
+</head>
+<body>
+ <div class="desktop-strip"><span><i data-icon="heart" data-size="16"></i> OUR LITTLE GETAWAY</span><span>PHÚ QUỐC <b>✦</b> NOV 2026</span></div>
+ <header class="topbar"><a class="brand" href="#" aria-label="첫날 일정으로"><span class="brand-icon" data-icon="bag" data-size="40"></span><span><small>PHU QUOC POCKET TRIP</small><strong>우리의 푸꾸옥<span class="pink">!</span></strong></span></a><div class="travel-party"><span class="two-hearts" aria-hidden="true"><i data-icon="bunny" data-size="25"></i><i data-icon="cat" data-size="25"></i></span><span>2 PLAYERS<br><b>5박 7일</b></span></div><button id="backup-top" class="icon-button" aria-label="백업 열기" title="백업 열기"><i data-icon="save" data-size="26"></i></button></header>
+ <main>
+  <div class="trip-caption"><span>2026.11.03 <i>→</i> 11.09</span><span>둘이서, 우리 속도로 ♡</span></div>
+  <div id="storage-warning" class="notice warning" hidden></div>
+  <section id="route-panel" class="desk-window map-window" aria-label="날짜별 픽셀 여행 지도">
+   <div class="window-bar pink-bar"><span><i data-icon="map" data-size="20"></i> phuquoc.map</span><span class="window-controls" aria-hidden="true"><i>─</i><i>□</i><i>×</i></span></div>
+   <nav id="date-nav" class="date-nav" aria-label="여행 날짜"></nav>
+   <div class="map-heading"><div><p class="eyebrow" id="day-kicker"></p><h1 id="day-title"></h1></div><span class="day-sticker" id="day-sticker"></span></div>
+   <p id="day-intro" class="map-intro"></p>
+   <div class="adventure-layout"><div class="scene-wrap"><div id="pixel-scene" class="pixel-scene geographic-scene"><div id="geo-map" role="region" aria-label="실제 좌표 기준 푸꾸옥 지도"></div><span class="compass" aria-hidden="true">N<br>↑</span><span class="scene-label" id="scene-label"></span></div><div class="map-mode-bar"><button data-map-mode="day" class="active">오늘 동선</button><button data-map-mode="all">섬 전체</button><button id="map-town" data-map-mode="town">선셋타운 확대</button></div><p id="geo-zoom-hint" class="geo-zoom-hint"></p><div id="unplaced-spots" class="unplaced-spots" hidden></div></div>
+    <aside id="stop-focus" class="stop-focus" aria-live="polite"></aside></div>
+   <div class="journey-label"><span><i data-icon="walk" data-size="18"></i> 시간 따라, 한 칸씩</span><span>옆으로 넘겨보기 →</span></div>
+   <div id="time-trail" class="time-trail" aria-label="선택한 날짜의 시간별 방문 순서"></div>
+   <div class="map-bottom"><p>실제 해안선·좌표로 수정했어요.<br class="mobile-only"> 노란 선은 도로, 보라 점선은 케이블카예요.</p><button id="show-routes" class="google-button"><i data-icon="map" data-size="18"></i> 상세 길찾기 ↗</button></div>
+   <details id="route-drawer" class="route-drawer"><summary>구간별 Google 길찾기 <span>+</span></summary><div id="legs" class="legs"></div><p class="route-help">케이블카·호핑은 별도 교통이에요. 지점이나 업체가 미정인 구간은 선택 후 연결합니다.</p></details>
+  </section>
+  <details id="map-evidence" class="map-evidence desk-window"><summary>지도 검증 기록 · 2026.09.30 <span>+</span></summary><div class="window-body"><p><b>모양과 핀을 같은 좌표계로 그립니다.</b> 섬은 OSM 해안선 3,332개 점, 시설은 Google 장소 핀과 공항 여객터미널 자료를 사용해요. 북쪽을 위로 고정하며 가로·세로 비율을 임의로 늘리지 않아요.</p><ul><li>빈원더스는 빈펄 리조트 북쪽, 사파리는 빈원더스 동쪽.</li><li>안토이 케이블카역은 노스카 남쪽, VUI-Fest 야시장은 노스카 북쪽.</li><li>혼똔섬은 본섬 남쪽의 별도 섬이며 케이블카 선은 OSM에 등록된 선형이에요.</li></ul><p>배경 도로는 실제 지도 자료이며 선택한 이동 경로를 뜻하지 않아요. 길찾기·출입구·운영시간은 Google 링크와 현장에서 확인해요. 지점과 업체가 미정인 곳은 핀을 찍지 않아요.</p><div class="actions"><a href="https://www.openstreetmap.org/#map=10/10.19/103.97" target="_blank" rel="noopener">OSM 지형 대조 ↗</a><a href="https://www.google.com/maps/place/Phu+Quoc/" target="_blank" rel="noopener">Google 지도와 비교 ↗</a></div></div></details>
+  <nav class="view-nav" aria-label="플래너 화면"><button data-view="plan" class="active"><i data-icon="book" data-size="20"></i> 일정</button><button data-view="bookings"><i data-icon="ticket" data-size="20"></i> 예약</button><button data-view="research"><i data-icon="folder" data-size="20"></i> 후보</button><button data-view="checklist"><i data-icon="check" data-size="20"></i> 체크 <span id="remaining" class="count"></span></button><button data-view="backup"><i data-icon="save" data-size="20"></i> 백업</button></nav>
+  <section id="view-plan" class="view">
+   <div class="section-head"><div><p class="eyebrow">OUR DAILY QUESTS</p><h2>오늘의 일정 <span id="quest-count" class="quest-count"></span></h2></div><button id="add-event" class="secondary"><span>+</span> 일정 추가</button></div>
+   <div class="stay-line" id="stay"></div><div id="conflicts" class="notice warning" hidden></div><p class="quest-list-help">시간순으로 한눈에 · 일정을 누르면 자세히 볼 수 있어요</p><div id="timeline" class="timeline"></div>
+   <div class="extras-grid"><section class="desk-window prep-card"><div class="window-bar mint-bar"><span><i data-icon="bag" data-size="18"></i> 챙겨요.txt</span><span aria-hidden="true">✧</span></div><div class="window-body"><h3>오늘의 가방</h3><ul id="prep"></ul><div class="inventory-icons" aria-hidden="true"><i data-icon="camera" data-size="32"></i><i data-icon="ticket" data-size="32"></i><i data-icon="sun" data-size="32"></i></div></div></section><section class="desk-window note-card"><div class="window-bar lilac-bar"><span><i data-icon="book" data-size="18"></i> 우리의 메모</span><span aria-hidden="true">♡</span></div><div class="window-body"><label for="day-note">오늘 남기고 싶은 것</label><textarea id="day-note" rows="5" placeholder="예약 답변이나 작은 발견을&#10;여기에 적어두세요 :)" maxlength="3000"></textarea><small id="save-state">이 브라우저에 자동 저장</small></div></section></div>
+  </section>
+  <section id="view-bookings" class="view" hidden><div class="section-head"><div><p class="eyebrow">OUR CONFIRMED RESERVATIONS</p><h2>예약 보관함</h2></div><i data-icon="ticket" data-size="36"></i></div><p class="notice">YUJU SPA 예약 확정 내용을 추가했어요. 예약 날짜·시작 시각·코스는 확인 중이에요. 항공과 숙소 예약도 아래에서 함께 확인하세요.</p><div id="booking-cards" class="booking-grid"></div><p class="muted">예약번호·투숙객 이름·송금 내역·계좌 정보·예약 원본 이미지는 이 페이지에 포함하지 않았어요.</p></section>
+  <section id="view-research" class="view" hidden><div class="section-head"><div><p class="eyebrow">CHOOSING THE GOOD STUFF</p><h2>아직 고르는 중 ♡</h2></div><i data-icon="folder" data-size="36"></i></div><div class="notice">2026.09.30 공개 안내 기준 · 아직 예약하지 않은 후보예요. 여행일 가격·픽업·한국인 최신 후기는 추가 확인이 필요해요.</div><div id="candidates" class="candidate-grid"></div><section class="desk-window"><div class="window-bar butter-bar">동선 메모.txt</div><div class="window-body"><p>11/5 공항 드랍은 유지합니다. 나항센 지점을 확인한 뒤 캐리어·대기를 포함한 남부 이동 차량을 비교합니다.</p><p>11/6은 혼똔 → 호텔 샤워 → 마사지 → 선셋 → 야시장 → 공연. 실제 운행·공연시간을 확인하면 세부시간을 채워요.</p><p>YUJU SPA 예약과 짐 보관·샤워 이용 가능 답변을 확인했어요. 기존 11/8 일정에 임시 연결했으며 예약 날짜·시간·코스는 확인 중이에요. 점심 전 짐 보관과 공항 샌딩 시간은 별도 확인해요. 공항 도착 목표는 20:00–20:30입니다.</p></div></section></section>
+  <section id="view-checklist" class="view" hidden><div class="section-head"><div><p class="eyebrow">READY, SET, TRAVEL!</p><h2>출발 전 퀘스트</h2></div><i data-icon="check" data-size="36"></i></div><p class="muted">완료 체크는 개인 확인 기록이에요. 예약 상태와 기존 일정은 그대로 유지됩니다.</p><div id="check-progress" class="check-progress"></div><div id="checklist"></div><section class="desk-window"><div class="window-bar pink-bar"><span><i data-icon="ticket" data-size="18"></i> 확정 예약 보관함</span><span>LOCKED</span></div><div class="window-body"><div id="reservations"></div><p class="muted">인수인계와 사용자 예약 자료 기준. 항공·숙소·YUJU SPA 상세는 예약 탭에서 확인해요. 예약번호는 로컬 개인자료에 따로 보관합니다.</p></div></section></section>
+  <section id="view-backup" class="view" hidden><div class="section-head"><div><p class="eyebrow">SAVE YOUR ADVENTURE</p><h2>여행 세이브 포인트</h2></div><i data-icon="save" data-size="40"></i></div><div class="backup-grid"><section class="desk-window"><div class="window-bar lilac-bar">save-file.json</div><div class="window-body"><h3>내 여행 백업</h3><p>메모·추가 일정·체크는 이 기기의 이 브라우저에 저장돼요. 새 파일로 옮기기 전 백업을 내려받으세요.</p><div class="actions"><button id="export" class="primary">백업 내려받기 ↓</button><button id="import-open" class="secondary">가져오기 ↑</button><input id="import-file" type="file" accept="application/json,.json" hidden></div><p id="backup-result" role="status"></p><p class="muted">가져오기는 현재 편집 내용을 대체합니다. 대체 전 백업을 자동으로 내려받아요.</p></div></section><section class="desk-window"><div class="window-bar mint-bar">휴대폰에서 열기.exe</div><div class="window-body"><h3>파일 하나면 준비 끝!</h3><p><strong>여행플래너.html</strong>을 내려받아 브라우저에서 실행하세요. 해안선·도로·장소 좌표와 픽셀 폰트도 파일에 들어 있어요. 미리보기에서 버튼이 반응하지 않으면 다운로드 후 다시 열어주세요.</p><p>실제 길찾기 링크에는 인터넷이 필요해요. 여행용 웹주소와 자동 동기화는 아직 연결 전입니다.</p><button id="print" class="secondary">전체 일정 인쇄 / PDF</button></div></section><section class="desk-window"><div class="window-bar butter-bar">변하지 않는 약속</div><div class="window-body"><h3>확정 사항은 안전하게</h3><p>항공시간·숙소·핵심 방문 순서는 보호돼요. 세부시간과 개인 메모를 더하고, 추가한 일정은 편집·삭제할 수 있어요.</p><p>지도는 실제 OSM 해안선·도로와 확인한 장소 좌표로 표시해요. 도로 배경은 선택한 길찾기 결과가 아니며 자세한 이동 경로는 구간별 Google 링크에서 확인하세요.</p></div></section><section class="desk-window"><div class="window-bar pink-bar">credits.txt</div><div class="window-body"><h3>우리만의 작은 여행 게임</h3><p>사용자 레퍼런스의 색과 픽셀 창 스타일을 참고했어요. 이전 생성 그림을 실제 해안선과 좌표 기반 지도로 교체했습니다.</p><p>지도 자료: <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">© OpenStreetMap contributors</a> (ODbL 1.0). 장소 핀 대조: Google Maps, 2026.09.30.</p><p>폰트: <a href="https://github.com/quiple/galmuri" target="_blank" rel="noopener">갈무리 · quiple</a> (SIL OFL 1.1).</p><details><summary>폰트 라이선스</summary><pre id="font-license">Copyright &amp;copy; 2019–2025 Lee Minseo (quiple@quiple.dev)
+
+This font software is licensed under the SIL Open Font License, Version 1.1.
+This license is copied below, and is also available with a FAQ at:
+&lt;https://openfontlicense.org&gt;
+
+# SIL OPEN FONT LICENSE Version 1.1 - 26 February 2007
+
+## PREAMBLE
+
+The goals of the Open Font License (OFL) are to stimulate worldwide
+development of collaborative font projects, to support the font creation
+efforts of academic and linguistic communities, and to provide a free and
+open framework in which fonts may be shared and improved in partnership
+with others.
+
+The OFL allows the licensed fonts to be used, studied, modified and
+redistributed freely as long as they are not sold by themselves. The
+fonts, including any derivative works, can be bundled, embedded,
+redistributed and/or sold with any software provided that any reserved
+names are not used by derivative works. The fonts and derivatives,
+however, cannot be released under any other type of license. The
+requirement for fonts to remain under this license does not apply
+to any document created using the fonts or their derivatives.
+
+## DEFINITIONS
+
+&quot;Font Software&quot; refers to the set of files released by the Copyright
+Holder(s) under this license and clearly marked as such. This may
+include source files, build scripts and documentation.
+
+&quot;Reserved Font Name&quot; refers to any names specified as such after the
+copyright statement(s).
+
+&quot;Original Version&quot; refers to the collection of Font Software components as
+distributed by the Copyright Holder(s).
+
+&quot;Modified Version&quot; refers to any derivative made by adding to, deleting,
+or substituting -- in part or in whole -- any of the components of the
+Original Version, by changing formats or by porting the Font Software to a
+new environment.
+
+&quot;Author&quot; refers to any designer, engineer, programmer, technical
+writer or other person who contributed to the Font Software.
+
+## PERMISSION &amp; CONDITIONS
+
+Permission is hereby granted, free of charge, to any person obtaining
+a copy of the Font Software, to use, study, copy, merge, embed, modify,
+redistribute, and sell modified and unmodified copies of the Font
+Software, subject to the following conditions:
+
+1. Neither the Font Software nor any of its individual components,
+in Original or Modified Versions, may be sold by itself.
+
+2. Original or Modified Versions of the Font Software may be bundled,
+redistributed and/or sold with any software, provided that each copy
+contains the above copyright notice and this license. These can be
+included either as stand-alone text files, human-readable headers or
+in the appropriate machine-readable metadata fields within text or
+binary files as long as those fields can be easily viewed by the user.
+
+3. No Modified Version of the Font Software may use the Reserved Font
+Name(s) unless explicit written permission is granted by the corresponding
+Copyright Holder. This restriction only applies to the primary font name as
+presented to the users.
+
+4. The name(s) of the Copyright Holder(s) or the Author(s) of the Font
+Software shall not be used to promote, endorse or advertise any
+Modified Version, except to acknowledge the contribution(s) of the
+Copyright Holder(s) and the Author(s) or with their explicit written
+permission.
+
+5. The Font Software, modified or unmodified, in part or in whole,
+must be distributed entirely under this license, and must not be
+distributed under any other license. The requirement for fonts to
+remain under this license does not apply to any document created
+using the Font Software.
+
+## TERMINATION
+
+This license becomes null and void if any of the above conditions are
+not met.
+
+## DISCLAIMER
+
+THE FONT SOFTWARE IS PROVIDED &quot;AS IS&quot;, WITHOUT WARRANTY OF ANY KIND,
+EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO ANY WARRANTIES OF
+MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT
+OF COPYRIGHT, PATENT, TRADEMARK, OR OTHER RIGHT. IN NO EVENT SHALL THE
+COPYRIGHT HOLDER BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
+INCLUDING ANY GENERAL, SPECIAL, INDIRECT, INCIDENTAL, OR CONSEQUENTIAL
+DAMAGES, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+FROM, OUT OF THE USE OR INABILITY TO USE THE FONT SOFTWARE OR FROM
+OTHER DEALINGS IN THE FONT SOFTWARE.
+</pre></details><details><summary>Leaflet · BSD-2-Clause 라이선스</summary><pre>__LEAFLET_LICENSE__</pre></details><p>개인 메모는 현재 브라우저에 저장해요. Google 링크를 누르면 해당 서비스에 장소 요청이 전달됩니다. 공유용 페이지에는 예약번호·투숙객 이름을 넣지 않았어요.</p></div></section></div></section>
+  <footer><span><i data-icon="heart" data-size="14"></i> MADE FOR OUR LITTLE TRIP</span><span>저장하고, 쉬어가고, 다시 출발!</span></footer>
+ </main>
+ <nav class="mobile-nav" aria-label="빠른 이동"><button id="mobile-map" class="active"><i data-icon="map" data-size="24"></i><span>여행 지도</span></button><button data-view="plan"><i data-icon="book" data-size="24"></i><span>하루 일정</span></button><button data-view="bookings"><i data-icon="ticket" data-size="24"></i><span>예약</span></button><button data-view="checklist"><i data-icon="check" data-size="24"></i><span>체크</span></button><button data-view="backup"><i data-icon="save" data-size="24"></i><span>백업</span></button><span class="taskbar-clock">NOV<br>2026</span></nav>
+ <dialog id="editor" class="desk-window"><form id="event-form"><div class="window-bar pink-bar"><h2 id="editor-title">일정 편집</h2><button type="button" id="editor-close" aria-label="닫기">×</button></div><div class="window-body"><p id="editor-help" class="muted"></p><label>일정 이름<input id="edit-title" maxlength="100" required></label><label>시간 또는 시간대<input id="edit-time" maxlength="50" placeholder="예: 15:30 또는 오후"></label><label id="place-field">장소<select id="edit-place"></select></label><label id="query-field">새 장소 이름 · 주소<input id="edit-query" maxlength="200" placeholder="Google 지도에서 찾을 장소 이름"></label><label id="mode-field">이동수단<select id="edit-mode"><option value="walk">도보</option><option value="car">차량</option><option value="stay">이동 없음</option><option value="boat">보트</option><option value="cable">케이블카</option></select></label><label id="after-field">추가 위치<select id="edit-after"></select></label><label>개인 메모<textarea id="edit-note" rows="4" maxlength="3000"></textarea></label><div id="edit-error" class="notice warning" hidden></div><div class="actions"><button type="submit" class="primary">저장하기 ♡</button><button type="button" id="delete-event" class="danger" hidden>추가 일정 삭제</button></div></div></form></dialog>
+ <div id="toast" role="status" class="toast" hidden></div><div id="print-content"></div>
+ <script src="vendor/leaflet.js"></script><script src="geometry.js"></script><script src="geography.js"></script><script src="bookings.js"></script><script src="data.js"></script><script src="icons.js"></script><script src="map-board.js"></script><script src="app.js"></script>
+</body>
+</html>

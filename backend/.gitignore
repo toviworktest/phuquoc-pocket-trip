@@ -1,0 +1,6 @@
+.env
+.env.*
+*.tar
+*.tar.gz
+node_modules/
+built-preview.html
