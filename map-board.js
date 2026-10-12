@@ -22,7 +22,8 @@
   L.control.scale({imperial:false,position:'bottomleft',maxWidth:90}).addTo(map);
   markers=L.layerGroup().addTo(map);
   map.on('zoomend moveend',renderMarkers);
-  new ResizeObserver(()=>{map.invalidateSize({pan:false});}).observe(document.getElementById('geo-map'));
+  // Re-frame preset views when the panel width changes (e.g. desktop switches to two columns); keep manual zoom/pan.
+  new ResizeObserver(()=>{map.invalidateSize({pan:false});if(mode!=='detail')fit(mode);}).observe(document.getElementById('geo-map'));
  }
  function placeGroups(){const byPlace=new Map();entries.forEach((e,i)=>{if(!G.places[e.place])return;if(!byPlace.has(e.place))byPlace.set(e.place,{id:e.place,p:G.places[e.place],events:[]});byPlace.get(e.place).events.push({e,i});});return [...byPlace.values()];}
  function renderMarkers(){

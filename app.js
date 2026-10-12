@@ -1,6 +1,8 @@
 (() => {
  'use strict';
- const B=window.PQ_BASE,G=window.PQ_GEOMETRY,KEY='phuquoc-personal-2026-v1';
+ const B=window.PQ_BASE,G=window.PQ_GEOMETRY,KEY='phuquoc-personal-2026-v1',PH=window.PQ_PHOTOS||{};
+ // Inlined photos are data URLs; turn each into a short blob URL once so re-renders stay light.
+ for(const p of Object.values(PH)){if(typeof p.src!=='string'||!p.src.startsWith('data:')||typeof Blob!=='function'||!URL.createObjectURL)continue;try{const [head,b64]=p.src.split(','),bin=atob(b64),bytes=new Uint8Array(bin.length);for(let i=0;i<bin.length;i++)bytes[i]=bin.charCodeAt(i);p.src=URL.createObjectURL(new Blob([bytes],{type:head.slice(5,head.indexOf(';'))}));}catch{}}
  const $=id=>document.getElementById(id), esc=x=>String(x??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
  const modes={walk:'도보',car:'차량 · 셔틀',stay:'이동 없음',flight:'항공',cable:'케이블카',boat:'스피드보트'};
  const status={confirmed:'확정',planned:'방문 예정',check:'확인 필요'};
@@ -143,21 +145,31 @@
  const displayNote=e=>activityFor(e)?.note||updatedNotes[e.id]||e.note;
  Object.assign(briefs,{'d1-flight':'제주항공 7C2315 · 인천 출발. 위탁수하물 기본 15kg.','d1-hotel':'빈펄 Deluxe (twin) · 2박. 늦은 체크인과 공항 픽업 배차 확인.','d3-checkout':'11/5 12:00까지 체크아웃. 공항 드랍 시간은 확인해요.','d3-noska':'14:00부터 체크인. Window Suite Fireworks Ocean View · 3박.','d6-checkout':'11/8 12:00까지 체크아웃. 오전 출발 계획은 그대로예요.','d6-flight':'제주항공 7C2316 · 인천행. 위탁수하물 기본 15kg.','d7-arrive':'인천 도착! 한국 현지 06:35는 기존 인수인계 기준이에요.'});
  const iconFor=e=>({safari:'paw',wonders:'fish',vinpearl:'bed',noska:'bed',grand:'castle',sen:'food',bun:'food',kingkong:'bag',duong:'walk',cable:'cable',aqua:'palm',sunset:'sun',market:'food',kiss:'star',airport:'plane'}[e.place]||(/massage|spa/.test(e.id)?'flower':/sunset/.test(e.id)?'sun':e.mode==='flight'?'plane':e.mode==='boat'?'boat':e.mode==='car'?'car':'star'));
+ // Photo per place, with event-level overrides. Unconfirmed branches (sen, bun, kingkong) and the
+ // undecided southern massage keep an icon tile instead of a photo of some other venue.
+ const placePhotos={airport:'airport',vinpearl:'beach',safari:'safari',wonders:'wonders',grand:'grand',noska:'sunsettown',cable:'cable',aqua:'aqua',sunset:'sunsettown',market:'nighttown',kiss:'kissshow',duong:'duong'};
+ const eventPhotos={'d1-flight':'flight','d6-flight':'flight','d7-arrive':'flight','d4-sunset':'kissbridge','d5-pickup':'anthoi','d5-islands':'kem','d5-evening':'kissbridge','d6-spa':'duong'};
+ const dayPhotos=['flight','wonders','sunsettown','cable','kem','duong','sunset'];
+ const photo=key=>key&&PH[key]?.src?PH[key]:null,eventPhoto=e=>photo(eventPhotos[e.id]||placePhotos[e.place]);
+ const thumb=(e,size)=>{const p=eventPhoto(e);return p?`<img src="${esc(p.src)}" alt="" loading="lazy" decoding="async">`:pixelIcon(iconFor(e),size);};
+ const credit=p=>p?`사진 · ${esc(p.caption)} — <a href="${esc(p.source)}" target="_blank" rel="noopener">${esc(p.author)}</a>, <a href="${esc(p.licenseUrl)}" target="_blank" rel="noopener">${esc(p.license)}</a>`:'';
  const smallTitle=e=>activityFor(e)?.name||shortNames[e.id]||e.title;
  const brief=e=>activityFor(e)?.brief||briefs[e.id]||e.note||'새로 더한 여행 조각이에요.';
  function renderDates(){
-  $('date-nav').innerHTML=B.days.map((d,i)=>`<button data-day="${d.id}" class="${selected===d.id?'active':''}" aria-pressed="${selected===d.id}" aria-label="11월 ${Number(d.id.slice(-2))}일 ${d.weekday}요일 ${d.title}"><small>DAY ${String(i+1).padStart(2,'0')}</small><strong>11.${d.id.slice(-2)}</strong><em>${d.weekday}</em></button>`).join('');
+  $('date-nav').innerHTML=B.days.map((d,i)=>`<button data-day="${d.id}" class="${selected===d.id?'active':''}" aria-pressed="${selected===d.id}" aria-label="11월 ${Number(d.id.slice(-2))}일 ${d.weekday}요일 ${d.title}"><small>DAY ${i+1}</small><strong>11.${d.id.slice(-2)}</strong><em>${d.weekday}</em></button>`).join('');
  }
  function renderPlan(){
   const d=currentDay(),evs=dayEvents(d);if(!evs.some(e=>e.id===activeEvent))activeEvent=evs[0].id;renderDates();
-  $('day-kicker').textContent=`DAY ${String(B.days.indexOf(d)+1).padStart(2,'0')} / ${d.region}`;
+  const dayIndex=B.days.indexOf(d);
+  $('day-kicker').textContent=`DAY ${String(dayIndex+1).padStart(2,'0')} · ${d.region}`;
   $('day-title').textContent=d.title;$('day-intro').textContent=d.intro;
+  const hero=photo(dayPhotos[dayIndex]);$('day-photo').src=hero?.src||'';$('day-photo').hidden=!hero;$('day-photo-credit').innerHTML=credit(hero);
   const stickers=[['plane','여행 시작!'],['paw','북부 탐험'],['bag','남부로 이사'],['palm','물놀이 DAY'],['boat','바다 모험'],['save','추억 저장'],['heart','다녀왔어요']];
-  const st=stickers[B.days.indexOf(d)];$('day-sticker').innerHTML=pixelIcon(st[0],22)+esc(st[1]);
-  $('stay').innerHTML=`<span>${pixelIcon('bed',18)} ${esc(d.stay)}</span><span>11월 ${Number(d.id.slice(-2))}일 ${d.weekday}요일</span>`;
+  const st=stickers[dayIndex];$('day-sticker').innerHTML=pixelIcon(st[0],16)+esc(st[1]);
+  $('stay').innerHTML=`<span>${pixelIcon('bed',16)} ${esc(d.stay)}</span><span>11월 ${Number(d.id.slice(-2))}일 ${d.weekday}요일</span>`;
   $('prep').innerHTML=dayPrep(d).map(p=>`<li>${esc(p)}</li>`).join('');$('day-note').value=state.dayNotes[d.id]||'';
   $('quest-count').textContent=evs.length;
-  $('timeline').innerHTML=evs.map((e,i)=>{const p=getPlace(e);return `<article class="event ${activeEvent===e.id?'active':''}" data-id="${esc(e.id)}"><details class="quest-details"><summary class="quest-summary"><span class="quest-time"><span class="quest-number">QUEST ${String(i+1).padStart(2,'0')}</span><strong>${esc(e.time||'시간 미정')}</strong><small>${e.zone?esc(e.zone)+' 현지':e.fixedTime?'확정 시간':'계획 시간대'}</small></span><div class="quest-content"><div class="quest-heading"><span class="quest-icon" aria-hidden="true">${pixelIcon(iconFor(e),22)}</span><h3>${esc(e.title)}</h3><span class="badge ${e.status}">${e.custom?'추가 일정':status[e.status]}</span></div><p class="event-brief">${esc(brief(e))}</p>${e.personal?'<span class="quest-note-marker">♡ 메모 있음</span>':''}</div><span class="quest-chevron" aria-hidden="true"></span></summary><div class="quest-expanded"><p class="event-note">${esc(displayNote(e))}</p>${e.personal?`<p class="personal-note">♡ ${esc(e.personal)}</p>`:''}<span class="transport">${pixelIcon(e.mode==='stay'?'bed':e.mode==='flight'?'plane':e.mode,16)} ${esc(modes[e.mode])}${p?.region?' · '+esc(p.region):''}</span><div class="event-actions"><button data-spot="${esc(e.id)}">지도에서 보기</button>${p?`<a class="place-link" href="${esc(searchLink(p))}" target="_blank" rel="noopener">${unresolvedPlaces.has(e.place)?'지점 검색':'Google 지도'} ↗</a>`:''}<button class="edit-button" data-edit="${esc(e.id)}">${e.fixedTime?'메모 편집':'시간 · 메모 편집'}</button></div></div></details></article>`}).join('');
+  $('timeline').innerHTML=evs.map((e,i)=>{const p=getPlace(e),ph=eventPhoto(e);return `<article class="event ${activeEvent===e.id?'active':''}" data-id="${esc(e.id)}"><details class="quest-details"><summary class="quest-summary"><span class="quest-thumb" aria-hidden="true">${thumb(e,28)}<b>${i+1}</b></span><div class="quest-content"><p class="quest-time">${esc(e.time||'시간 미정')}<small>${e.zone?esc(e.zone)+' 현지':e.fixedTime?'확정 시간':'계획'}</small></p><div class="quest-heading"><h3>${esc(e.title)}</h3><span class="badge ${e.custom?'custom':e.status}">${e.custom?'추가 일정':status[e.status]}</span></div><p class="event-brief">${esc(brief(e))}</p>${e.personal?'<span class="quest-note-marker">♡ 메모 있음</span>':''}</div><span class="quest-chevron" aria-hidden="true"></span></summary><div class="quest-expanded"><p class="event-note">${esc(displayNote(e))}</p>${e.personal?`<p class="personal-note">♡ ${esc(e.personal)}</p>`:''}<span class="transport">${pixelIcon(e.mode==='stay'?'bed':e.mode==='flight'?'plane':e.mode,16)} ${esc(modes[e.mode])}${p?.region?' · '+esc(p.region):''}</span><div class="event-actions"><button data-spot="${esc(e.id)}">지도에서 보기</button>${p?`<a class="place-link" href="${esc(searchLink(p))}" target="_blank" rel="noopener">${unresolvedPlaces.has(e.place)?'지점 검색':'Google 지도'} ↗</a>`:''}<button class="edit-button" data-edit="${esc(e.id)}">${e.fixedTime?'메모 편집':'시간 · 메모 편집'}</button></div>${ph?`<p class="photo-credit">${credit(ph)}</p>`:''}</div></details></article>`}).join('');
   const warnings=timeWarnings(d);$('conflicts').hidden=!warnings.length;$('conflicts').textContent=warnings.join(' ');
   renderLegs();renderAdventure();
  }
@@ -173,18 +185,18 @@
   const unplaced=evs.map((ev,i)=>({e:ev,i})).filter(x=>!G.places[x.e.place]);
   $('unplaced-spots').hidden=!unplaced.length;
   $('unplaced-spots').innerHTML=unplaced.length?'<span class="pending-label">지도 밖 · 위치 확인 중인 장소</span>'+unplaced.map(x=>`<button data-focus="${esc(x.e.id)}" class="${x.e.id===activeEvent?'active':''}" aria-pressed="${x.e.id===activeEvent}">${pixelIcon(iconFor(x.e),15)} ${x.i+1}. ${esc(smallTitle(x.e))} <span>· ${x.e.zone==='한국'?'인천 · 지도 범위 밖':unresolvedPlaces.has(x.e.place)?'지점 확인':activityFor(x.e)?'핀 위치 확인 중':'위치 미정'}</span></button>`).join(''):'';
-  $('time-trail').innerHTML=evs.map((ev,i)=>`<button class="trail-stop ${ev.id===activeEvent?'active':''}" data-focus="${esc(ev.id)}" aria-pressed="${ev.id===activeEvent}"><span class="trail-top">${pixelIcon(iconFor(ev),18)} STOP ${String(i+1).padStart(2,'0')}</span><strong>${esc(smallTitle(ev))}</strong><small>${esc(ev.time||'시간 미정')}${ev.zone?' · '+esc(ev.zone):''}</small></button>`).join('');
+  $('time-trail').innerHTML=evs.map((ev,i)=>`<button class="trail-stop ${ev.id===activeEvent?'active':''}" data-focus="${esc(ev.id)}" aria-pressed="${ev.id===activeEvent}"><span class="trail-thumb" aria-hidden="true">${thumb(ev,20)}<b>${i+1}</b></span><span class="min-w-0"><strong>${esc(smallTitle(ev))}</strong><small>${esc(ev.time||'시간 미정')}${ev.zone?' · '+esc(ev.zone):''}</small></span></button>`).join('');
   const p=getPlace(e),leg=getLegs(d).find(l=>l.eventId===e.id);let mapAction='';
   if(leg&&validLandLeg(leg))mapAction=`<a class="google-button" href="${esc(direction(leg.from,leg.to,leg.mode))}" target="_blank" rel="noopener">${pixelIcon('map',17)} ${leg.mode==='walk'?'도보':'차량'} 길찾기 ↗</a>`;
   else if(p)mapAction=`<a class="google-button" href="${esc(searchLink(p))}" target="_blank" rel="noopener">${pixelIcon('map',17)} ${unresolvedPlaces.has(e.place)?'지점 검색':'Google 장소'} ↗</a>`;
   else mapAction=`<span class="focus-missing">${e.mode==='flight'?(e.id==='d1-flight'?'ICN → PQC · 7C2315':'PQC → ICN · 7C2316'):'장소 확정 후 지도 연결'}</span>`;
-  $('stop-focus').innerHTML=`<div class="focus-top"><span class="focus-order">STOP ${String(idx+1).padStart(2,'0')} / ${String(evs.length).padStart(2,'0')}</span><span class="focus-controls"><button data-step="-1" aria-label="이전 장소" ${idx===0?'disabled':''}>←</button><button data-step="1" aria-label="다음 장소" ${idx===evs.length-1?'disabled':''}>→</button></span></div><div class="focus-icon">${pixelIcon(iconFor(e),42)}</div><p class="focus-time">${esc(e.time||'시간 미정')} <small>${e.zone?esc(e.zone)+' 현지':'계획 시간대'}</small></p><h2 class="focus-title">${esc(smallTitle(e))}</h2><p class="focus-note">${esc(brief(e))}</p><div class="focus-actions">${mapAction}${p&&G.places[e.place]?`<button class="text-button" data-locate="${esc(e.id)}">이 장소 확대 ⌖</button>`:''}<button class="text-button" data-jump="${esc(e.id)}">상세 일정 ↓</button></div>`;
+  $('stop-focus').innerHTML=`<div class="focus-top"><span class="focus-order">${idx+1} / ${evs.length} 번째 장소</span><span class="focus-controls"><button data-step="-1" aria-label="이전 장소" ${idx===0?'disabled':''}>←</button><button data-step="1" aria-label="다음 장소" ${idx===evs.length-1?'disabled':''}>→</button></span></div><div class="focus-main"><span class="focus-thumb" aria-hidden="true">${thumb(e,34)}</span><div class="min-w-0"><p class="focus-time">${esc(e.time||'시간 미정')} <small>${e.zone?esc(e.zone)+' 현지':'계획 시간대'}</small></p><h2 class="focus-title">${esc(smallTitle(e))}</h2><p class="focus-note">${esc(brief(e))}</p></div></div><div class="focus-actions">${mapAction}${p&&G.places[e.place]?`<button class="text-button" data-locate="${esc(e.id)}">이 장소 확대</button>`:''}<button class="text-button" data-jump="${esc(e.id)}">상세 일정 보기</button></div>`;
   document.querySelectorAll('#timeline .event').forEach(el=>el.classList.toggle('active',el.dataset.id===activeEvent));
  }
  function focusStop(id){if(!dayEvents(currentDay()).some(e=>e.id===id))return;activeEvent=id;const trailX=$('time-trail').scrollLeft;renderAdventure();$('time-trail').scrollLeft=trailX;const stop=$('time-trail').querySelector('.active');if(stop){const left=stop.offsetLeft-$('time-trail').offsetLeft;if(left<trailX||left+stop.offsetWidth>trailX+$('time-trail').clientWidth)$('time-trail').scrollTo({left:Math.max(0,left-24),behavior:'smooth'});}}
 
  function renderResearch(){
-  $('candidates').innerHTML=B.candidates.filter(c=>!window.PQ_BOOKINGS.activities?.some(a=>a.id===c.id)).map(c=>`<article class="candidate"><p class="eyebrow">${esc(c.group)}</p><span class="badge check">${esc(c.tag)} · 미예약</span><h3>${esc(c.name)}</h3><p class="price">${esc(c.price)}</p><dl><dt>공개 안내에서 확인</dt><dd>${esc(c.facts)}</dd><dt>아직 확인할 것</dt><dd>${esc(c.unknown)}</dd><dt>동선과 조건을 고려한 제안</dt><dd>${esc(c.assessment)}</dd></dl><a href="${esc(c.url)}" target="_blank" rel="noopener">공식 안내 확인 ↗</a><p style="margin:12px 0 0;font-size:10px">확인일 2026.09.30 · 11월 여행일 적용 여부 재확인</p></article>`).join('');
+  $('candidates').innerHTML=B.candidates.filter(c=>!window.PQ_BOOKINGS.activities?.some(a=>a.id===c.id)).map(c=>`<article class="candidate"><p class="eyebrow">${esc(c.group)}</p><span class="badge check">${esc(c.tag)} · 미예약</span><h3>${esc(c.name)}</h3><p class="price">${esc(c.price)}</p><dl><dt>공개 안내에서 확인</dt><dd>${esc(c.facts)}</dd><dt>아직 확인할 것</dt><dd>${esc(c.unknown)}</dd><dt>동선과 조건을 고려한 제안</dt><dd>${esc(c.assessment)}</dd></dl><a class="btn" href="${esc(c.url)}" target="_blank" rel="noopener">공식 안내 확인 ↗</a><p class="muted">확인일 2026.09.30 · 11월 여행일 적용 여부 재확인</p></article>`).join('');
  }
  function renderChecks(){
   const openChecks=new Set([...($('checklist').querySelectorAll?.('details[open]')||[])].map(el=>el.id));
@@ -202,10 +214,69 @@
   $('reservations').innerHTML=[...B.reservations,...(window.PQ_BOOKINGS.activities||[]).map(a=>({label:a.name,date:a.date,detail:a.people+'명'+(a.price?' · '+a.price:''),status:'예약 확정'}))].map(r=>`<div class="reservation"><div><strong>${esc(r.label)}</strong><span>${esc(r.date)} · ${esc(r.detail)}</span></div><span class="badge">${esc(r.status)}</span></div>`).join('');
  }
 
- function renderBookings(){
+ // Confirmed bookings in trip order. Unknown future bookings sort to the end.
+ const bookingOrder=['outbound','vinpearl','vinpearl-combo','noska','honthom-cable-lunch','kiss-of-the-sea','yuju','inbound'];
+ const bookingPhotos={outbound:'flight',inbound:'flight',vinpearl:'beach',noska:'sunsettown','vinpearl-combo':'safari','honthom-cable-lunch':'cable','kiss-of-the-sea':'kissshow',yuju:'duong'};
+ const shortDate=s=>String(s).replace(/^2026-(\d\d)-(\d\d)/,(_,m,d)=>`${+m}/${+d}`);
+ function bookingItems(){
   const R=window.PQ_BOOKINGS;
-  $('booking-cards').innerHTML=(R.activities||[]).map(a=>`<article class="desk-window booking-card" data-booking="${esc(a.id)}"><div class="window-bar pink-bar"><span>${pixelIcon(a.icon||'flower',20)} ${esc(a.name)}</span><span class="badge confirmed">예약 확정</span></div><div class="window-body"><p class="eyebrow">예약 확인 ${esc(a.checkedAt)}</p><h3>${esc(a.name)} · ${a.people}명</h3>${a.price?`<p class="room-label">${esc(a.price)} · ${a.people}인 합계</p>`:''}${a.tip?`<p>${esc(a.tip)}</p>`:''}<div class="booking-times"><div><small>예약 날짜</small><strong>${esc(a.date)}</strong></div><div><small>시작 시각</small><strong>${esc(a.time)}</strong></div></div><p>${esc(a.course)}</p><p class="booking-note">${esc(a.placement)}</p><div class="booking-tags">${a.features.map(v=>`<span>${esc(v)}</span>`).join('')}</div><details><summary>이용 안내 · 확인할 내용 +</summary><ul>${a.notes.map(n=>`<li>${esc(n)}</li>`).join('')}</ul></details><div class="actions">${(a.places?a.places.map(place=>getPlace({place})):[a]).map(p=>`<a class="google-button" href="${esc(searchLink(p))}" target="_blank" rel="noopener">${esc(p.name)} · Google 지도 ↗</a>`).join('')}</div></div></article>`).join('')+R.flights.map(f=>`<article class="desk-window booking-card"><div class="window-bar pink-bar"><span>${pixelIcon('plane',20)} ${f.airline} ${f.flight}</span><span class="badge confirmed">예약 확인</span></div><div class="window-body"><p class="eyebrow">${esc(f.date)}</p><h3>${esc(f.from)} → ${esc(f.to)}</h3><div class="booking-times"><div><small>출발</small><strong>${esc(f.departure)}</strong></div><div><small>도착</small><strong>${esc(f.arrival)}</strong></div></div><p>${pixelIcon('bag',19)} ${esc(f.baggage)}</p><p class="booking-note">${esc(f.arrivalSource)}</p></div></article>`).join('')+R.hotels.map(h=>`<article class="desk-window booking-card"><div class="window-bar mint-bar"><span>${pixelIcon('bed',20)} ${h.id==='vinpearl'?'북부 · 2박':'남부 · 3박'}</span><span class="badge confirmed">예약 확인</span></div><div class="window-body"><h3>${esc(h.name)}</h3><p class="room-label">${esc(h.room)}</p><p class="muted">객실 ${h.rooms}개 · 성인 ${h.adults}명</p><div class="booking-times"><div><small>체크인 시작</small><strong>${esc(h.checkIn)}</strong></div><div><small>체크아웃 마감</small><strong>${esc(h.checkOut)}</strong></div></div><p>${esc(h.address)}</p><p class="booking-note">예약 메일에 표시된 혜택</p><div class="booking-tags">${h.benefits.map(v=>`<span>${esc(v)}</span>`).join('')}</div><details><summary>특별 요청 · 확인할 내용 +</summary><p>${esc(h.requests.join(' / '))}</p><ul>${h.notes.map(n=>`<li>${esc(n)}</li>`).join('')}</ul></details><a class="google-button" href="${esc(searchLink(getPlace({place:h.id})))}" target="_blank" rel="noopener">정확한 호텔 지도 ↗</a></div></article>`).join('');
+  return [...R.flights.map(f=>({id:f.id,kind:'flight',data:f,title:`${f.airline} ${f.flight} · ${f.from.split(' ').at(-1)}→${f.to.split(' ').at(-1)}`,when:shortDate(f.date)})),
+   ...R.hotels.map(h=>({id:h.id,kind:'hotel',data:h,title:`${h.id==='vinpearl'?'Vinpearl':'Noska'} ${h.nights}박`,when:`${h.checkIn.split(' ')[0]} – ${h.checkOut.split(' ')[0]} · ${h.nights}박`})),
+   ...(R.activities||[]).map(a=>({id:a.id,kind:'activity',data:a,title:a.name,when:/^2026-/.test(a.date)?shortDate(a.date):'날짜 확인 중'}))]
+   .sort((x,y)=>(bookingOrder.indexOf(x.id)+1||99)-(bookingOrder.indexOf(y.id)+1||99));
  }
+ function bookingCard(b){
+  const ph=photo(bookingPhotos[b.id]),x=b.data,facts=(l1,v1,l2,v2)=>`<dl class="booking-facts"><div><dt>${l1}</dt><dd>${esc(v1)}</dd></div><div><dt>${l2}</dt><dd>${esc(v2)}</dd></div></dl>`,tags=list=>`<div class="booking-tags">${list.map(v=>`<span>${esc(v)}</span>`).join('')}</div>`;
+  let kicker,heading,body,more,links;
+  if(b.kind==='flight'){kicker=`항공 · ${x.airline} ${x.flight}`;heading=`${x.from} → ${x.to}`;body=facts('출발',x.departure,'도착',x.arrival)+tags([x.baggage]);more=`<p>${esc(x.arrivalSource)}</p>`;links='';}
+  else if(b.kind==='hotel'){kicker=`숙소 · ${x.id==='vinpearl'?'북부':'남부'} ${x.nights}박`;heading=x.name;body=`<p class="mt-1 text-sm font-semibold text-slate-700">${esc(x.room)} · 객실 ${x.rooms}개 · 성인 ${x.adults}명</p>`+facts('체크인 시작',x.checkIn,'체크아웃 마감',x.checkOut)+tags(x.benefits);more=`<p>${esc(x.address)}</p><p>특별 요청 · ${esc(x.requests.join(' / '))}</p><ul>${x.notes.map(n=>`<li>${esc(n)}</li>`).join('')}</ul>`;links=`<a class="btn" href="${esc(searchLink(getPlace({place:x.id})))}" target="_blank" rel="noopener">정확한 호텔 지도 ↗</a>`;}
+  else{kicker=`예약 확인 ${x.checkedAt} · ${x.people}명`;heading=x.name;body=facts('예약 날짜',x.date,'시작 시각',x.time)+`<p class="mt-3 text-sm text-slate-700">${esc(x.course)} · <span class="text-slate-500">${esc(x.placement)}</span></p>`+tags([...x.features,...(x.tip?[x.tip]:[])]);more=`<ul>${x.notes.map(n=>`<li>${esc(n)}</li>`).join('')}</ul>`;links=(x.places?x.places.map(place=>getPlace({place})):[x]).map(p=>`<a class="btn" href="${esc(searchLink(p))}" target="_blank" rel="noopener">${esc(p.name)} · Google 지도 ↗</a>`).join('');}
+  const cover=ph?`<div class="booking-cover"><img src="${esc(ph.src)}" alt="${esc(ph.caption)}" loading="lazy" decoding="async">`:`<div class="booking-cover no-photo">${pixelIcon(x.icon||'ticket',48)}`;
+  return `<article class="booking-card" data-booking="${esc(b.id)}">${cover}<span class="badge confirmed">예약 확정</span><span class="when">${esc(b.when)}</span></div><div class="booking-body"><p class="booking-kicker">${esc(kicker)}</p><h3>${esc(heading)}</h3>${body}${costField(b)}<details class="booking-more"><summary>${b.kind==='hotel'?'주소 · 특별 요청 · 확인할 내용':b.kind==='flight'?'확인 메모':'이용 안내 · 확인할 내용'}</summary>${more}</details>${links?`<div class="booking-links">${links}</div>`:''}${ph?`<p class="photo-credit">${credit(ph)}</p>`:''}</div></article>`;
+ }
+ function renderBookings(){
+  $('booking-cards').innerHTML=bookingItems().map(bookingCard).join('');
+  renderCosts();
+ }
+ // Cost tracker: amounts the couple paid for confirmed bookings. Kept on this device only (own key,
+ // never part of the shared planner_state or the public page) and included in JSON backups.
+ const COST_KEY='phuquoc-costs-2026-v1',currencies=['KRW','VND','USD'];
+ const emptyCosts=()=>({v:1,items:{},rates:{USD:1400,VND:0.055}});
+ function validateCosts(c){
+  assert(safeObject(c)&&c.v===1&&safeObject(c.items)&&safeObject(c.rates)&&Object.keys(c).every(k=>['v','items','rates'].includes(k)),'비용 기록 형식을 확인하세요.');
+  const ids=new Set(bookingItems().map(b=>b.id));
+  for(const [id,item] of Object.entries(c.items)){
+   assert(ids.has(id),'알 수 없는 예약의 비용입니다.');
+   assert(item===null||(safeObject(item)&&Object.keys(item).every(k=>['amount','currency'].includes(k))&&Number.isFinite(item.amount)&&item.amount>=0&&item.amount<=1e12&&currencies.includes(item.currency)),'비용 금액을 확인하세요.');
+  }
+  assert(Object.keys(c.rates).every(k=>['USD','VND'].includes(k))&&Number.isFinite(c.rates.USD)&&c.rates.USD>0&&c.rates.USD<1e5&&Number.isFinite(c.rates.VND)&&c.rates.VND>0&&c.rates.VND<10,'환율을 확인하세요.');
+  return structuredClone(c);
+ }
+ let costs=emptyCosts();
+ try{const rawCosts=localStorage.getItem(COST_KEY);if(rawCosts)costs=validateCosts(JSON.parse(rawCosts));}catch{costs=emptyCosts();}
+ function saveCosts(){try{localStorage.setItem(COST_KEY,JSON.stringify(costs));return true;}catch{toast('이 브라우저에 비용을 저장하지 못했어요. 백업을 내려받아 주세요.');return false;}}
+ // A price already in the public booking summary (YUJU SPA) is shown until the user edits it.
+ const listedCost=id=>{const m=/^([\d,]+)\s*(KRW|VND|USD)$/.exec(window.PQ_BOOKINGS.activities?.find(a=>a.id===id)?.price||'');return m?{amount:Number(m[1].replace(/,/g,'')),currency:m[2]}:null;};
+ const costOf=id=>Object.hasOwn(costs.items,id)?costs.items[id]:listedCost(id);
+ const num=n=>Number(n).toLocaleString('ko-KR',{maximumFractionDigits:2});
+ const toKRW=c=>c.currency==='KRW'?c.amount:c.amount*costs.rates[c.currency];
+ const money=c=>c.currency==='KRW'?num(c.amount)+'원':c.currency==='USD'?'$'+num(c.amount):num(c.amount)+' VND';
+ function costNote(id){
+  const c=costOf(id);
+  if(!c)return '이 기기에만 저장 · 공개 페이지에 올라가지 않아요';
+  const approx=c.currency==='KRW'?'':`≈ ${num(Math.round(toKRW(c)))}원 · `;
+  return approx+(Object.hasOwn(costs.items,id)?'이 기기에만 저장':'예약 내용 기준 2인 합계 · 수정할 수 있어요');
+ }
+ function costField(b){
+  const c=costOf(b.id);
+  return `<div class="cost-field"><label for="cost-${esc(b.id)}">${b.kind==='flight'?'항공권 금액 · 왕복 결제면 한쪽에만':'결제 금액'}</label><div class="cost-input"><input id="cost-${esc(b.id)}" data-cost="${esc(b.id)}" inputmode="decimal" autocomplete="off" placeholder="금액 입력" value="${c?num(c.amount):''}" aria-describedby="cost-note-${esc(b.id)}"><select data-cost-currency="${esc(b.id)}" aria-label="${esc(b.title)} 통화">${currencies.map(x=>`<option ${(c?.currency||'KRW')===x?'selected':''}>${x}</option>`).join('')}</select></div><small id="cost-note-${esc(b.id)}">${esc(costNote(b.id))}</small></div>`;
+ }
+ function renderCosts(){
+  const rows=bookingItems().map(b=>({b,c:costOf(b.id)})),entered=rows.filter(r=>r.c),foreign=entered.some(r=>r.c.currency!=='KRW');
+  const total=Math.round(entered.reduce((s,r)=>s+toKRW(r.c),0)),open=new Set([...($('cost-summary').querySelectorAll?.('details[open]')||[])].map(d=>d.dataset.part));
+  $('cost-summary').innerHTML=`<p class="cost-label">확정 예약에 쓴 금액</p><strong class="cost-total">${entered.length?(foreign?'약 ':'')+num(total)+'원':'아직 입력 전'}</strong><p class="cost-sub">${rows.length}건 중 ${entered.length}건 입력${foreign?' · 외화는 환율 설정으로 환산':''} · 이 기기에만 저장돼요. 각 예약 카드에서 입력해요.</p><details class="cost-rates" data-part="rows" ${open.has('rows')?'open':''}><summary>항목별 금액 보기 <span aria-hidden="true">+</span></summary><div class="cost-rows">${rows.map(r=>`<div class="cost-row"><span>${esc(r.b.title)}</span>${r.c?`<b>${esc(money(r.c))}</b>`:'<b class="empty">미입력</b>'}</div>`).join('')}</div></details><details class="cost-rates" data-part="rates" ${open.has('rates')?'open':''}><summary>환율 설정 · 대략값 <span aria-hidden="true">+</span></summary><label>1 USD<span><input data-rate="USD" inputmode="decimal" value="${num(costs.rates.USD)}" aria-label="1달러당 원화"> 원</span></label><label>1,000 VND<span><input data-rate="VND" inputmode="decimal" value="${num(costs.rates.VND*1000)}" aria-label="1,000동당 원화"> 원</span></label></details>`;
+ }
+ const parseAmount=v=>{const t=String(v).replace(/[^\d.]/g,'');return t===''?null:Number(t);};
  function readNavigation(search){
   const query=new URLSearchParams(search),day=query.get('day'),view=query.get('view');
   return {day:dayIds.has(day)?day:B.days[0].id,view:['map','plan','bookings','research','checklist','backup','more'].includes(view)?view:'map'};
@@ -255,7 +326,7 @@
   $('delete-event').hidden=!editing?.custom;$('edit-error').hidden=true;$('editor').showModal();
  }
  function exportBackup(auto=false){
-  const file={schema:'phuquoc.personal/1',exportedAt:new Date().toISOString(),baseline:invariant,state};
+  const file={schema:'phuquoc.personal/1',exportedAt:new Date().toISOString(),baseline:invariant,state,costs};
   const a=document.createElement('a'),blob=new Blob([JSON.stringify(file,null,2)],{type:'application/json'});a.href=URL.createObjectURL(blob);a.download=`phuquoc-${auto?'before-import-':''}${new Date().toISOString().replace(/[:.]/g,'-')}.json`;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000);
   if(!auto)toast('JSON 백업을 내려받았습니다.');
  }
@@ -285,11 +356,29 @@
  $('export').onclick=()=>exportBackup();$('import-open').onclick=()=>$('import-file').click();
  $('import-file').addEventListener('change',async e=>{
   const f=e.target.files[0];if(!f)return;
-  try{assert(f.size<2_000_000,'2MB 이하 JSON만 가져올 수 있습니다.');const data=JSON.parse(await f.text());assert(data.schema==='phuquoc.personal/1','지원하지 않는 백업 형식입니다.');assert(canon(data.baseline)===canon(invariant),'항공·숙소·핵심 일정이 현재 기준과 다릅니다. 가져오기를 중단했습니다.');const next=validateState(data.state);exportBackup(true);state=next;save();renderPlan();renderChecks();$('backup-result').textContent='가져오기 완료. 이전 편집 내용은 before-import JSON 파일로 내려받았습니다.';toast('백업을 가져왔습니다.');}
+  try{assert(f.size<2_000_000,'2MB 이하 JSON만 가져올 수 있습니다.');const data=JSON.parse(await f.text());assert(data.schema==='phuquoc.personal/1','지원하지 않는 백업 형식입니다.');assert(canon(data.baseline)===canon(invariant),'항공·숙소·핵심 일정이 현재 기준과 다릅니다. 가져오기를 중단했습니다.');const next=validateState(data.state),nextCosts=data.costs===undefined?null:validateCosts(data.costs);exportBackup(true);state=next;save();if(nextCosts){costs=nextCosts;saveCosts();renderBookings();}renderPlan();renderChecks();$('backup-result').textContent='가져오기 완료. 이전 편집 내용은 before-import JSON 파일로 내려받았습니다.';toast('백업을 가져왔습니다.');}
   catch(err){$('backup-result').textContent='가져오기 실패: '+err.message;toast('백업을 확인하세요. 기존 내용은 유지했습니다.');}
   e.target.value='';
  });
  $('print').onclick=printAll;
- restoreNavigation();renderResearch();renderChecks();renderBookings();
+ $('booking-cards').addEventListener('change',e=>{
+  const card=e.target.closest('[data-booking]');if(!card||!(e.target.dataset.cost||e.target.dataset.costCurrency))return;
+  const id=card.dataset.booking,input=card.querySelector('[data-cost]'),amount=parseAmount(input.value),currency=card.querySelector('[data-cost-currency]').value;
+  if(amount!==null&&!(Number.isFinite(amount)&&amount<=1e12)){toast('금액을 숫자로 입력해 주세요.');input.value=costOf(id)?num(costOf(id).amount):'';return;}
+  const next=structuredClone(costs);next.items[id]=amount===null?null:{amount,currency};
+  costs=validateCosts(next);if(!saveCosts())return;
+  input.value=amount===null?'':num(amount);$('cost-note-'+id).textContent=costNote(id);renderCosts();
+ });
+ $('cost-summary').addEventListener('change',e=>{
+  const key=e.target.dataset.rate;if(!key)return;const v=parseAmount(e.target.value);
+  try{const next=structuredClone(costs);next.rates[key]=key==='VND'?v/1000:v;costs=validateCosts(next);saveCosts();}catch{toast('환율을 숫자로 입력해 주세요.');}
+  renderBookings();
+ });
+ function renderDday(){
+  const now=Date.now(),start=Date.parse('2026-11-03T00:00:00+09:00'),end=Date.parse('2026-11-10T00:00:00+09:00'),days=Math.ceil((start-now)/864e5);
+  $('dday').textContent=now>=end?'다녀왔어요':now>=start?'여행 중':days<=0?'D-DAY':'D-'+days;
+ }
+ $('photo-credits').innerHTML=Object.values(PH).map(p=>`<li>${credit(p)}</li>`).join('');
+ renderDday();restoreNavigation();renderResearch();renderChecks();renderBookings();
  window.PQ_TEST={validateState,timeWarnings,dayEvents,getLegs,baseline:invariant,getState:()=>structuredClone(state)};
 })();
