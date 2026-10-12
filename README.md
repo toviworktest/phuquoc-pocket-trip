@@ -5,9 +5,9 @@
 휴대폰에서는 하단의 지도·일정·예약·체크·더보기로 이동합니다. 지도와 시간표를 따로 열고 상단 날짜로 바꿀 수 있으며, 체크리스트의 요약을 누르면 상세 팁과 링크가 펼쳐집니다. [모바일 UX 검토와 개선 기록](docs/MOBILE_UX_REVIEW.md)
 
 - [여행 페이지](https://toviworktest.github.io/phuquoc-pocket-trip/) — 로그인 없이 열람
-- [이메일 로그인 · 관리](https://phuquoc-pocket-trip-2026.tovi.chatgpt.site/login) — 초대받은 이메일과 플래너 전용 비밀번호로 편집
+- 편집: 사이트 더보기 → 편집 연결에서 기기마다 GitHub 토큰을 한 번 연결 ([안내](docs/GITHUB_SYNC.md))
 
-GitHub Pages는 공개 화면을 배포합니다. 공유 데이터와 이메일 로그인은 기존 Sites의 Worker/D1에서 처리합니다. 여행자는 ChatGPT 계정이 필요 없습니다. 공유 메모는 공개이므로 예약번호·여권·결제정보를 입력하지 마세요.
+GitHub Pages가 화면과 공유 데이터(`data/state.json` → `state.json`)를 함께 배포합니다. 편집한 기기는 GitHub API로 이 파일을 커밋하고, 커밋마다 자동 배포돼 1–2분 뒤 모두에게 보입니다. Git 기록이 그대로 백업입니다. 저장소가 공개라서 공유 메모도 공개이니 예약번호·여권·결제정보는 적지 마세요. 비용 기록은 기기에만 저장됩니다. 옛 Sites 이메일 로그인 서버는 더 이상 쓰지 않습니다(`backend/`는 보관용).
 
 ## 개발
 
@@ -20,9 +20,9 @@ npm test
 npm run preview
 ```
 
-`http://127.0.0.1:4178`에서 공개 화면을 확인합니다. `npm run preview`는 실제 서버의 공유 내용을 읽는 보기 전용 화면입니다. 로컬 로그인·편집 테스트는 `node backend/tests/dev-server.mjs`를 실행하고 `http://localhost:4176`으로 접속합니다. 실제 데이터와 분리된 메모리 DB를 사용합니다.
+`http://127.0.0.1:4178`에서 공개 화면을 확인합니다. `npm run preview`는 빌드된 `public-site/`(화면 + `state.json`)를 보여줍니다. 편집 흐름 테스트는 GitHub API를 모의하거나 별도 테스트 저장소로 하고, 실제 `data/state.json`에 테스트 내용을 커밋하지 마세요.
 
-`main`에 push하면 `.github/workflows/pages.yml`이 빌드·테스트 후 **public-site/**만 GitHub Pages에 배포합니다. 로그인 서버 변경은 Sites 별도 배포가 필요합니다. 자세한 운영 방법과 인수인계는 [docs/HANDOFF_FOR_CLAUDE.md](docs/HANDOFF_FOR_CLAUDE.md)를 읽어 주세요.
+`main`에 push하면 `.github/workflows/pages.yml`이 빌드·테스트 후 **public-site/**만 GitHub Pages에 배포합니다. `data/state.json`은 빌드와 테스트에서 검증되므로 잘못된 내용은 배포되지 않습니다. 자세한 운영 방법과 인수인계는 [docs/HANDOFF_FOR_CLAUDE.md](docs/HANDOFF_FOR_CLAUDE.md)를 읽어 주세요.
 
 확정 항공·숙소·기본 방문 순서는 보호합니다. YUJU SPA 예약은 반영되었으며, 사진에 없는 이용 날짜·시각·코스는 확인 대기입니다.
 

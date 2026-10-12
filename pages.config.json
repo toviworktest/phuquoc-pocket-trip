@@ -1,4 +1,10 @@
 {
   "managementOrigin": "https://phuquoc-pocket-trip-2026.tovi.chatgpt.site",
-  "publicUrl": "https://toviworktest.github.io/phuquoc-pocket-trip/"
+  "publicUrl": "https://toviworktest.github.io/phuquoc-pocket-trip/",
+  "github": {
+    "owner": "toviworktest",
+    "repo": "phuquoc-pocket-trip",
+    "branch": "main",
+    "path": "data/state.json"
+  }
 }

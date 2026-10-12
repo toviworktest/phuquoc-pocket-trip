@@ -5,6 +5,7 @@
 @source "./index.html";
 @source "./app.js";
 @source "./map-board.js";
+@source "./scripts/build-web.mjs";
 
 @theme {
   --font-sans: "Pretendard Variable", Pretendard, -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Noto Sans KR", "Malgun Gothic", system-ui, sans-serif;
@@ -324,6 +325,11 @@
   .cloud-actions { @apply flex flex-wrap gap-2 px-4 pt-1; }
   .cloud-actions a, .cloud-actions button { @apply btn min-h-11 text-[13px] no-underline; }
   .cloud-actions #cloud-save { @apply btn-primary; }
+  .cloud-token { @apply mx-4 mt-3 grid gap-1.5 rounded-2xl bg-slate-50 p-3 text-[13px]; }
+  .cloud-token > label { @apply font-semibold text-slate-700; }
+  .cloud-token .cost-input { @apply mt-0; }
+  .cloud-token input { @apply text-left font-normal; }
+  .cloud-help { @apply text-xs leading-relaxed text-slate-600; }
   .cloud-status { @apply px-4 pt-2 pb-3 text-xs text-slate-500; }
   .cloud-status.error { @apply text-rose-700; }
   #cloud-privacy { @apply mt-6 text-xs leading-relaxed text-slate-500; }

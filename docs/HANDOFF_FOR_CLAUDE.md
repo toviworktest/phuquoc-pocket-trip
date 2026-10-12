@@ -1,5 +1,9 @@
 # Claude Code 인수인계 — 2026-10-11
 
+## 최신 운영 방식 · 2026-10-13 (Sites 로그인 → GitHub)
+
+공유 데이터는 저장소의 `data/state.json`이고, 편집은 기기마다 연결한 GitHub fine-grained 토큰으로 커밋한다. 공개 페이지는 Sites를 호출하지 않는다. 아래의 Sites·이메일 로그인·D1·초대 관련 설명은 보관용 `backend/`에만 해당한다. 기준 문서는 [GITHUB_SYNC.md](GITHUB_SYNC.md)다.
+
 ## 최신 디자인 · 2026-10-13 (화이트 톤 재디자인)
 
 아래의 어두운 녹색·ui.css·Galmuri 설명은 폐기됐다. 현재 기준은 [DESIGN_2026-10-13.md](DESIGN_2026-10-13.md)다. 화이트 톤 + Tailwind v4 + 실제 장소 사진 + 예약별 비용 기록(기기 로컬 저장). 모바일 구조(하단 탐색 5개, 지도/일정 분리, 고정 날짜, URL 복원)는 그대로 유지한다.
