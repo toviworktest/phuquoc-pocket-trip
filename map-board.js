@@ -4,20 +4,23 @@
  'use strict';
  const G=window.PQ_GEOMETRY,D=window.PQ_GEOGRAPHY,esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
  const titles={airport:'푸꾸옥 공항',vinpearl:'빈펄 리조트',safari:'사파리',wonders:'빈원더스',grand:'그랜드월드',noska:'노스카',cable:'안토이역',aqua:'혼똔 · 아쿠아토피아',sunset:'선셋타운',market:'VUI-Fest 야시장',kiss:'키스 오브 더 씨',duong:'즈엉동'};
- const icons={airport:'plane',vinpearl:'bed',safari:'paw',wonders:'fish',grand:'castle',noska:'bed',cable:'cable',aqua:'palm',sunset:'sun',market:'food',kiss:'star',duong:'walk'};
  let map,markers,dayId,entries=[],activeId,onSelect,mode='day',visibleMarkerData=[];
  const allBounds=[[9.91,103.813],[10.465,104.105]],townBounds=[[10.0242,103.999],[10.0385,104.0108]];
  function init(){
   if(map)return;
   map=L.map('geo-map',{zoomControl:false,attributionControl:true,scrollWheelZoom:false,minZoom:9,maxZoom:18,zoomSnap:.25,maxBounds:[[9.83,103.68],[10.58,104.23]],maxBoundsViscosity:.7,preferCanvas:false});
   map.setView([10.18,103.97],10);
-  map.attributionControl.setPrefix(false);map.attributionControl.addAttribution('© <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OSM</a> · 좌표 <a href="https://www.google.com/maps/place/Phu+Quoc/" target="_blank" rel="noopener">Google</a>');
+  map.attributionControl.setPrefix(false);map.attributionControl.addAttribution('© <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> · 좌표 <a href="https://www.google.com/maps/place/Phu+Quoc/" target="_blank" rel="noopener">Google</a>');
+  // Offline fallback: the verified OSM coastline/roads sit in a pane below the tiles and only show if tiles cannot load.
+  map.createPane('fallback').style.zIndex=150;
+  const fallback=L.svg({pane:'fallback'});
+  L.geoJSON(D.land,{renderer:fallback,pane:'fallback',interactive:false,smoothFactor:0,style:{color:'#b9c7b2',weight:1,fillColor:'#f2efe9',fillOpacity:1}}).addTo(map);
+  L.geoJSON(D.roads,{renderer:fallback,pane:'fallback',interactive:false,smoothFactor:0,style:f=>({color:'#ffffff',weight:['trunk','primary'].includes(f.properties.kind)?3:1.5,opacity:1})}).addTo(map);
+  // Real map tiles from the OpenStreetMap tile servers (light personal use, attribution shown). A local file:// page sends
+  // no Referer, which the tile usage policy rejects, so the offline planner keeps only the fallback drawing.
+  if(location.protocol!=='file:')L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,className:'osm-tiles'}).addTo(map);
   const renderer=L.svg();renderer.addTo(map);
-  const svg=renderer._container,ns='http://www.w3.org/2000/svg',defs=document.createElementNS(ns,'defs');
-  defs.innerHTML='<pattern id="pixel-land" width="28" height="28" patternUnits="userSpaceOnUse"><rect width="28" height="28" fill="#cfdfb4"/><path d="M3 8h4v4H3zM18 20h3v3h-3z" fill="#a5c895" opacity=".6"/><path d="M20 5h4v2h-4z" fill="#e5ecc4"/></pattern>';svg.prepend(defs);
-  L.geoJSON(D.land,{renderer,interactive:false,smoothFactor:0,style:{color:'#6c947e',weight:2,fillColor:'url(#pixel-land)',fillOpacity:1}}).addTo(map);
-  L.geoJSON(D.roads,{renderer,interactive:false,smoothFactor:0,style:f=>({color:['trunk','primary'].includes(f.properties.kind)?'#faf0bb':'#faf6df',weight:['trunk','primary'].includes(f.properties.kind)?3:1.5,opacity:.9,lineCap:'square'})}).addTo(map);
-  L.geoJSON(D.cable,{renderer,interactive:false,smoothFactor:0,style:{color:'#9270af',weight:3,dashArray:'5 5',opacity:.85}}).addTo(map);
+  L.geoJSON(D.cable,{renderer,interactive:false,smoothFactor:0,style:{color:'#7c3aed',weight:3,dashArray:'6 6',opacity:.9}}).addTo(map);
   L.control.zoom({position:'topright',zoomInTitle:'지도 확대',zoomOutTitle:'지도 축소'}).addTo(map);
   L.control.scale({imperial:false,position:'bottomleft',maxWidth:90}).addTo(map);
   markers=L.layerGroup().addTo(map);
@@ -33,13 +36,13 @@
   for(const c of clusters){
    if(c.groups.length>1){
     const lat=c.groups.reduce((s,g)=>s+g.p.lat,0)/c.groups.length,lon=c.groups.reduce((s,g)=>s+g.p.lon,0)/c.groups.length,isActive=c.groups.some(g=>g.events.some(x=>x.e.id===activeId));
-    const html=`<button type="button" class="geo-cluster ${isActive?'active':''}" aria-label="${esc(c.groups.map(g=>titles[g.id]).join(', '))} ${c.groups.length}곳 확대">${pixelIcon('map',19)}<b>${c.groups.length}곳</b><small>눌러서 확대</small></button>`;
-    const marker=L.marker([lat,lon],{icon:L.divIcon({className:'geo-marker-wrap',html,iconSize:[72,54],iconAnchor:[36,27]}),keyboard:false}).addTo(markers);
+    const html=`<button type="button" class="geo-cluster ${isActive?'active':''}" aria-label="${esc(c.groups.map(g=>titles[g.id]).join(', '))} ${c.groups.length}곳 확대"><b>${c.groups.length}</b><small>곳</small></button>`;
+    const marker=L.marker([lat,lon],{icon:L.divIcon({className:'geo-marker-wrap',html,iconSize:[48,48],iconAnchor:[24,24]}),keyboard:false}).addTo(markers);
     marker.on('click',()=>{mode='detail';map.fitBounds(L.latLngBounds(c.groups.map(g=>[g.p.lat,g.p.lon])),{padding:[68,78],maxZoom:17,animate:false});updateStatus();});
     visibleMarkerData.push({cluster:true,places:c.groups.map(g=>g.id),lat,lon});
    }else{
     const g=c.groups[0],active=g.events.find(x=>x.e.id===activeId),target=active||g.events[0],numbers=g.events.map(x=>x.i+1).join('·'),label=titles[g.id]||g.id;
-    const html=`<button type="button" class="geo-pin ${active?'active':''}" data-map-place="${esc(g.id)}" aria-label="${esc(numbers+'번 '+label)}"><span class="geo-pin-box">${pixelIcon(icons[g.id],20)}<b>${numbers}</b></span><span class="geo-pin-dot"></span></button>`;
+    const html=`<button type="button" class="geo-pin ${active?'active':''}" data-map-place="${esc(g.id)}" aria-label="${esc(numbers+'번 '+label)}"><span class="geo-pin-box"><b>${numbers}</b></span></button>`;
     const marker=L.marker([g.p.lat,g.p.lon],{icon:L.divIcon({className:'geo-marker-wrap',html,iconSize:[46,44],iconAnchor:[23,44]}),keyboard:false,zIndexOffset:active?1000:0}).addTo(markers);
     marker.on('click',()=>onSelect?.(target.e.id));
     marker.bindTooltip(`<b>${esc(label)}</b>${active?`<span>${esc([...new Set(g.events.map(x=>x.e.time||'시간 미정'))].join(' / '))}</span>`:''}`,{permanent:true,direction:active?'top':'bottom',offset:active?[0,-44]:[0,6],className:'geo-place-label '+(active?'selected':'')});

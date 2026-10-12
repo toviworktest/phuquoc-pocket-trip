@@ -1,6 +1,6 @@
-/* Map chrome for the white theme. Geographic colours (sea, land, roads, cable line) are unchanged
-   and come from map-board.js; this file only styles controls, pins and labels drawn on top. */
-.geographic-scene{position:relative;height:380px}.geographic-scene #geo-map{height:100%;width:100%;background-color:#bce0d8;background-image:linear-gradient(#dff0dc42 1px,transparent 1px),linear-gradient(90deg,#dff0dc42 1px,transparent 1px);background-size:28px 28px;font-family:inherit;color:#0f172a}
+/* Map chrome over OpenStreetMap tiles (softened slightly for a calmer look). The sea colour is the offline fallback background; the verified
+   OSM coastline is drawn below the tiles only for when they cannot load. */
+.geographic-scene{position:relative;height:380px}.geographic-scene #geo-map{height:100%;width:100%;background-color:#aad3df;font-family:inherit;color:#0f172a}
 .geographic-scene .scene-label{position:absolute;z-index:700;top:10px;left:10px;max-width:calc(100% - 76px);padding:4px 10px;border-radius:999px;background:#fffffff0;box-shadow:0 1px 4px #0f172a1f;font-size:12px;font-weight:600;color:#334155;pointer-events:none}
 .geographic-scene .compass{position:absolute;z-index:700;bottom:30px;right:10px;padding:3px 8px;border-radius:999px;background:#ffffffe6;box-shadow:0 1px 4px #0f172a1f;font-size:11px;font-weight:700;color:#334155;pointer-events:none}
 .leaflet-container a{color:#0f766e}.leaflet-container .leaflet-control-attribution{font-size:10px;line-height:1.8;background:#ffffffe6;border-radius:8px 0 0 0;max-width:100%;padding:1px 6px;color:#475569}
@@ -8,12 +8,11 @@
 .leaflet-bar{border:0!important;border-radius:12px!important;overflow:hidden;box-shadow:0 2px 8px #0f172a29!important}.leaflet-touch .leaflet-bar a,.leaflet-bar a{width:40px;height:40px;line-height:40px;background:#fff;color:#0f172a;font-size:22px;text-decoration:none;border-bottom-color:#e2e8f0}.leaflet-bar a:hover{background:#f1f5f9}.leaflet-tooltip{white-space:normal}
 .geo-marker-wrap{background:none;border:0}
 .geo-pin{position:relative;display:flex;justify-content:center;align-items:flex-start;width:46px;height:44px;min-height:44px;padding:0;border:0;background:none!important;box-shadow:none!important;cursor:pointer}
-.geo-pin-box{position:relative;display:flex;align-items:center;justify-content:center;height:32px;min-width:36px;padding:0 4px;border-radius:10px;background:#fff;border:1.5px solid #cbd5e1;box-shadow:0 2px 6px #0f172a2e}
-.geo-pin-box:after{content:'';position:absolute;bottom:-9px;left:calc(50% - 1px);width:2px;height:8px;background:#475569}
-.geo-pin-box b{position:absolute;right:-10px;top:-9px;min-width:18px;height:18px;padding:0 4px;border-radius:999px;background:#0f172a;color:#fff;line-height:18px;font-size:10px;font-weight:700;text-align:center;white-space:nowrap}
-.geo-pin-dot{position:absolute;bottom:-1px;left:20px;width:6px;height:6px;border-radius:50%;background:#0f172a;border:1px solid #fff}
-.geo-pin.active .geo-pin-box{border-color:#0d9488;background:#f0fdfa;box-shadow:0 0 0 3px #0d948840,0 2px 6px #0f172a2e}.geo-pin.active b{background:#0d9488}
+.geo-pin-box{position:relative;display:grid;place-items:center;min-width:30px;height:30px;padding:0 7px;margin-top:2px;border-radius:15px 15px 15px 3px;transform:rotate(-45deg);background:#ea4335;border:2px solid #fff;box-shadow:0 2px 6px #0f172a59}
+.geo-pin-box b{transform:rotate(45deg);color:#fff;font-size:12px;font-weight:700;line-height:1;white-space:nowrap}
+.geo-pin.active .geo-pin-box{background:#0f766e;min-width:36px;height:36px;margin-top:-2px;box-shadow:0 0 0 4px #0f766e40,0 3px 8px #0f172a59}
 .geo-place-label{background:#fff;border:0;border-radius:8px;box-shadow:0 1px 5px #0f172a29;padding:2px 7px;font-size:11px;font-weight:600;line-height:1.5;text-align:center;color:#1e293b;max-width:150px;pointer-events:none}.geo-place-label b{font-weight:600;display:block;white-space:nowrap}.geo-place-label span{display:block;font-size:10px;font-weight:500;color:#b45309;max-width:140px}.geo-place-label:before{display:none}.geo-place-label.selected{background:#0f172a;color:#fff}.geo-place-label.selected span{color:#fde68a}
-.geo-cluster{display:grid;grid-template-columns:22px 1fr;align-items:center;justify-content:center;gap:0 4px;width:72px;min-height:54px;padding:6px;border:0;border-radius:14px;background:#fff;box-shadow:0 2px 8px #0f172a33;cursor:pointer}.geo-cluster small{grid-column:1/-1;font-size:9px;color:#475569;white-space:nowrap}.geo-cluster b{font-weight:700;font-size:12px;color:#0f172a}.geo-cluster.active{box-shadow:0 0 0 3px #0d948866,0 2px 8px #0f172a33}
+.geo-cluster{display:grid;place-items:center;align-content:center;width:48px;height:48px;padding:0;border:3px solid #fff;border-radius:50%;background:#1e293b;color:#fff;box-shadow:0 2px 8px #0f172a4d;cursor:pointer;line-height:1}.geo-cluster b{font-size:15px;font-weight:700}.geo-cluster small{font-size:9px;opacity:.9}.geo-cluster.active{background:#0f766e;box-shadow:0 0 0 4px #0f766e40,0 2px 8px #0f172a4d}
 @media(min-width:1000px){.geographic-scene{height:460px}}
 @media(max-width:360px){.geographic-scene{height:340px}}
+.osm-tiles{filter:saturate(.72) contrast(.96) brightness(1.03)}
