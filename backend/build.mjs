@@ -31,7 +31,7 @@ const cloud=await read('src/cloud.js'),css=await read('src/cloud.css');
 html=html.replace(appOriginal,()=>app);
 html=html.replace('</head>',()=>`<style>${css}</style></head>`);
 html=html.replace('<body>',()=>`<body><script>${cloud.replace(/<\/script/gi,'<\\/script')}</script>`);
-html=html.replace('<div id="storage-warning"',()=>`<section class="cloud-bar" aria-label="공유와 로그인"><span id="cloud-person" class="cloud-person">공유 일정 불러오는 중…</span><div class="cloud-actions"><a id="cloud-signin" href="/login">이메일로 로그인</a><button id="cloud-save" hidden>공유 저장 ♡</button><button id="cloud-reload">최신 내용 ↻</button><a id="cloud-password" href="/login?mode=change" hidden>비밀번호 변경</a><button id="cloud-signout" hidden>로그아웃</button></div><p id="cloud-status" class="cloud-status" role="status">일정은 누구나 보고, 허용된 계정만 수정할 수 있어요.</p></section><div id="storage-warning"`);
+html=html.replace('<div id="storage-warning"',()=>`<details id="cloud-panel" class="cloud-bar"><summary class="cloud-summary"><span id="cloud-person" class="cloud-person">공유 일정 불러오는 중…</span><span class="cloud-entry">관리 · 새로고침 <span aria-hidden="true">⌄</span></span></summary><div class="cloud-actions"><a id="cloud-signin" href="/login">이메일로 로그인</a><button id="cloud-save" hidden>공유 저장 ♡</button><button id="cloud-reload">최신 내용 ↻</button><a id="cloud-password" href="/login?mode=change" hidden>비밀번호 변경</a><button id="cloud-signout" hidden>로그아웃</button></div><p id="cloud-status" class="cloud-status" role="status">일정은 누구나 보고, 허용된 계정만 수정할 수 있어요.</p></details><div id="storage-warning"`);
 html=html.replace('이 브라우저에 자동 저장','공유 내용을 불러오는 중');
 html=html.replace('오늘 남기고 싶은 것','함께 보는 메모');
 html=html.replace('예약 답변이나 작은 발견을','공유할 여행 메모를');

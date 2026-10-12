@@ -11,10 +11,12 @@
   $('cloud-reload').disabled=busy;
   $('cloud-signin').hidden=session.authenticated;$('cloud-signout').hidden=!session.authenticated;
   $('cloud-password').hidden=!session.authenticated;
+  $('check-signin').hidden=session.authenticated;
+  $('check-signin').href=publicSite?publicSite.origin+'/login':'/login';
   $('cloud-person').textContent=session.authenticated?(session.displayName||'로그인됨')+(session.canEdit?' · 편집 가능':' · 보기 전용'):'누구나 보기 · 수정은 로그인';
   document.body.classList.toggle('cloud-readonly',!editable);
  }
- function status(message,error=false){$('cloud-status').textContent=message;$('cloud-status').classList.toggle('error',error);$('save-state').textContent=message;}
+ function status(message,error=false){if(error||dirty)$('cloud-panel').open=true;$('cloud-status').textContent=message;$('cloud-status').classList.toggle('error',error);$('save-state').textContent=message;}
  function markDirty(){if(!loaded||!session.canEdit)return;dirty=true;status('수정 중 · 위의 공유 저장을 눌러 반영하세요.');refreshControls();}
  async function api(path,options={}){
   if(publicSite&&(path!=='/api/state'||(options.method||'GET')!=='GET'))throw Error('로그인하고 관리 화면에서 수정해 주세요.');
@@ -39,10 +41,13 @@
  window.PQ_CLOUD={canEdit:()=>loaded&&session.canEdit&&!busy&&!blocked,save:markDirty,refreshControls};
  window.addEventListener('DOMContentLoaded',async()=>{
   $('cloud-save').onclick=saveShared;
+  $('account-open').hidden=false;
+  $('account-open').onclick=()=>{$('cloud-panel').open=true;$('cloud-panel').scrollIntoView({block:'start',behavior:'instant'});$('cloud-panel').querySelector('summary').focus({preventScroll:true});};
   $('cloud-reload').onclick=()=>{if(dirty&&!confirm('아직 공유 저장하지 않은 수정이 있어요. 최신 내용을 불러오면 이 화면의 초안을 대체합니다. 계속할까요?'))return;loadState(true);};
   $('cloud-signout').onclick=async()=>{if(dirty&&!confirm('공유 저장하지 않은 수정이 있어요. 로그아웃할까요?'))return;try{await api('/api/auth/sign-out',{method:'POST',headers:{'Content-Type':'application/json'},body:'{}'});dirty=false;location.reload();}catch(e){status('로그아웃하지 못했어요. 다시 시도해 주세요.',true);}};
   if(publicSite){$('cloud-signin').href=publicSite.origin+'/login';$('cloud-signin').textContent='로그인하고 관리 ↗';}
   else try{session=await api('/api/session');}catch(e){status('로그인 상태를 확인하지 못했어요. 일정은 볼 수 있어요.',true);}
+  if(session.canEdit)$('cloud-panel').open=true;
   await loadState(true);refreshControls();
   document.addEventListener('visibilitychange',()=>{if(!document.hidden&&!dirty)loadState();});
   setInterval(()=>{if(!document.hidden&&!dirty)loadState();},30000);
