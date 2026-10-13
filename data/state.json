@@ -3,6 +3,8 @@
  "tripId": "phuquoc-2026-11",
  "overrides": {},
  "extras": [],
- "checked": {},
+ "checked": {
+  "entry-form": true
+ },
  "dayNotes": {}
 }
