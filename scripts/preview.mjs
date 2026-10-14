@@ -1,6 +1,6 @@
 import http from 'node:http';
 import fs from 'node:fs/promises';
-const allowed=new Set(['index.html','robots.txt','state.json']);
+const allowed=new Set(['index.html','robots.txt','state.json','costs.json']);
 http.createServer(async(req,res)=>{
  const name=new URL(req.url,'http://localhost').pathname.slice(1)||'index.html';
  if(req.method!=='GET'||!allowed.has(name)){res.writeHead(404);res.end();return;}

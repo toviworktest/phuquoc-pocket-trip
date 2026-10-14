@@ -210,6 +210,12 @@
   .cost-rates summary span { @apply text-lg transition-transform; }
   .cost-rates label { @apply flex items-center justify-between gap-3 pb-3 text-[13px] text-white/90; }
   .cost-rates input { @apply w-28 border-white/20 bg-white/10 py-1.5 text-right text-white; }
+  .cost-sync { @apply card mb-4 grid gap-2 p-4 text-sm; }
+  .cost-sync-title { @apply font-bold text-slate-900; }
+  .cost-sync-msg { @apply text-xs leading-relaxed text-slate-600; }
+  .cost-sync-form { @apply grid gap-2; }
+  .cost-sync-form input, .cost-sync-form .cost-input input { @apply text-left font-normal; }
+  .cost-sync .btn { @apply justify-self-start; }
   .cost-field { @apply mt-3 rounded-2xl bg-slate-50 p-3; }
   .cost-field > label { @apply text-xs font-semibold text-slate-600; }
   .cost-input { @apply mt-1.5 flex gap-2; }

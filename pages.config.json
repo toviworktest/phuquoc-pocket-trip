@@ -5,6 +5,7 @@
     "owner": "toviworktest",
     "repo": "phuquoc-pocket-trip",
     "branch": "main",
-    "path": "data/state.json"
+    "path": "data/state.json",
+    "costsPath": "data/costs.json"
   }
 }

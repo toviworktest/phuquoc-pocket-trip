@@ -23,3 +23,16 @@ test('Shared state file in the repository passes the planner validator',async()=
  assert.throws(()=>ctx.window.fixture.validateState({...state,tripId:'other'}));
  assert.throws(()=>ctx.window.fixture.validateState({...state,overrides:{'d1-flight':{time:'19:00'}}}));
 });
+test('Shared costs are encrypted with the cost passphrase; the published box holds no plain amounts',async()=>{
+ const win={addEventListener(){},PQ_GITHUB:{owner:'o',repo:'r',branch:'main',path:'data/state.json',costsPath:'data/costs.json'}};
+ const ctx={window:win,localStorage:{getItem:()=>null},crypto:globalThis.crypto,TextEncoder,TextDecoder,btoa,atob,document:{}};vm.createContext(ctx);
+ vm.runInContext(await fs.readFile(new URL('github-sync.js',root),'utf8'),ctx);
+ const c=win.PQ_COST_CRYPTO,costs={v:1,items:{outbound:{amount:612000,currency:'KRW'}},rates:{USD:1400,VND:0.055}};
+ const box=await c.seal('tripcost2026',costs);
+ assert.equal(Object.keys(box).join(),'v,salt,iter,iv,data');assert(box.iter>=100000);assert(!JSON.stringify(box).includes('612000'));
+ assert.deepEqual(JSON.parse(JSON.stringify(await c.open('tripcost2026',box))),costs);
+ await assert.rejects(()=>c.open('wrong-pass',box));
+ const config=JSON.parse(await fs.readFile(new URL('pages.config.json',root),'utf8'));
+ try{const shared=JSON.parse(await fs.readFile(new URL(config.github.costsPath,root),'utf8'));assert.equal(Object.keys(shared).join(),'v,salt,iter,iv,data');assert(!/"amount"|KRW|VND|USD/.test(JSON.stringify(shared)));}
+ catch(e){if(e.code!=='ENOENT')throw e;}
+});

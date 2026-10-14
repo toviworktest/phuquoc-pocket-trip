@@ -263,9 +263,9 @@
  const money=c=>c.currency==='KRW'?num(c.amount)+'원':c.currency==='USD'?'$'+num(c.amount):num(c.amount)+' VND';
  function costNote(id){
   const c=costOf(id);
-  if(!c)return '이 기기에만 저장 · 공개 페이지에 올라가지 않아요';
+  if(!c)return '금액은 공개 페이지에 보이지 않아요';
   const approx=c.currency==='KRW'?'':`≈ ${num(Math.round(toKRW(c)))}원 · `;
-  return approx+(Object.hasOwn(costs.items,id)?'이 기기에만 저장':'예약 내용 기준 2인 합계 · 수정할 수 있어요');
+  return approx+(Object.hasOwn(costs.items,id)?'저장됨':'예약 내용 기준 2인 합계 · 수정할 수 있어요');
  }
  function costField(b){
   const c=costOf(b.id);
@@ -274,7 +274,7 @@
  function renderCosts(){
   const rows=bookingItems().map(b=>({b,c:costOf(b.id)})),entered=rows.filter(r=>r.c),foreign=entered.some(r=>r.c.currency!=='KRW');
   const total=Math.round(entered.reduce((s,r)=>s+toKRW(r.c),0)),open=new Set([...($('cost-summary').querySelectorAll?.('details[open]')||[])].map(d=>d.dataset.part));
-  $('cost-summary').innerHTML=`<p class="cost-label">확정 예약에 쓴 금액</p><strong class="cost-total">${entered.length?(foreign?'약 ':'')+num(total)+'원':'아직 입력 전'}</strong><p class="cost-sub">${rows.length}건 중 ${entered.length}건 입력${foreign?' · 외화는 환율 설정으로 환산':''} · 이 기기에만 저장돼요. 각 예약 카드에서 입력해요.</p><details class="cost-rates" data-part="rows" ${open.has('rows')?'open':''}><summary>항목별 금액 보기 <span aria-hidden="true">+</span></summary><div class="cost-rows">${rows.map(r=>`<div class="cost-row"><span>${esc(r.b.title)}</span>${r.c?`<b>${esc(money(r.c))}</b>`:'<b class="empty">미입력</b>'}</div>`).join('')}</div></details><details class="cost-rates" data-part="rates" ${open.has('rates')?'open':''}><summary>환율 설정 · 대략값 <span aria-hidden="true">+</span></summary><label>1 USD<span><input data-rate="USD" inputmode="decimal" value="${num(costs.rates.USD)}" aria-label="1달러당 원화"> 원</span></label><label>1,000 VND<span><input data-rate="VND" inputmode="decimal" value="${num(costs.rates.VND*1000)}" aria-label="1,000동당 원화"> 원</span></label></details>`;
+  $('cost-summary').innerHTML=`<p class="cost-label">확정 예약에 쓴 금액</p><strong class="cost-total">${entered.length?(foreign?'약 ':'')+num(total)+'원':'아직 입력 전'}</strong><p class="cost-sub">${rows.length}건 중 ${entered.length}건 입력${foreign?' · 외화는 환율 설정으로 환산':''} · 금액은 공개 페이지에 보이지 않아요. 각 예약 카드에서 입력해요.</p><details class="cost-rates" data-part="rows" ${open.has('rows')?'open':''}><summary>항목별 금액 보기 <span aria-hidden="true">+</span></summary><div class="cost-rows">${rows.map(r=>`<div class="cost-row"><span>${esc(r.b.title)}</span>${r.c?`<b>${esc(money(r.c))}</b>`:'<b class="empty">미입력</b>'}</div>`).join('')}</div></details><details class="cost-rates" data-part="rates" ${open.has('rates')?'open':''}><summary>환율 설정 · 대략값 <span aria-hidden="true">+</span></summary><label>1 USD<span><input data-rate="USD" inputmode="decimal" value="${num(costs.rates.USD)}" aria-label="1달러당 원화"> 원</span></label><label>1,000 VND<span><input data-rate="VND" inputmode="decimal" value="${num(costs.rates.VND*1000)}" aria-label="1,000동당 원화"> 원</span></label></details>`;
  }
  const parseAmount=v=>{const t=String(v).replace(/[^\d.]/g,'');return t===''?null:Number(t);};
  function readNavigation(search){
@@ -356,7 +356,7 @@
  $('export').onclick=()=>exportBackup();$('import-open').onclick=()=>$('import-file').click();
  $('import-file').addEventListener('change',async e=>{
   const f=e.target.files[0];if(!f)return;
-  try{assert(f.size<2_000_000,'2MB 이하 JSON만 가져올 수 있습니다.');const data=JSON.parse(await f.text());assert(data.schema==='phuquoc.personal/1','지원하지 않는 백업 형식입니다.');assert(canon(data.baseline)===canon(invariant),'항공·숙소·핵심 일정이 현재 기준과 다릅니다. 가져오기를 중단했습니다.');const next=validateState(data.state),nextCosts=data.costs===undefined?null:validateCosts(data.costs);exportBackup(true);state=next;save();if(nextCosts){costs=nextCosts;saveCosts();renderBookings();}renderPlan();renderChecks();$('backup-result').textContent='가져오기 완료. 이전 편집 내용은 before-import JSON 파일로 내려받았습니다.';toast('백업을 가져왔습니다.');}
+  try{assert(f.size<2_000_000,'2MB 이하 JSON만 가져올 수 있습니다.');const data=JSON.parse(await f.text());assert(data.schema==='phuquoc.personal/1','지원하지 않는 백업 형식입니다.');assert(canon(data.baseline)===canon(invariant),'항공·숙소·핵심 일정이 현재 기준과 다릅니다. 가져오기를 중단했습니다.');const next=validateState(data.state),nextCosts=data.costs===undefined?null:validateCosts(data.costs);exportBackup(true);state=next;save();if(nextCosts){costs=nextCosts;saveCosts();renderBookings();window.PQ_CLOUD?.costsChanged?.('*');}renderPlan();renderChecks();$('backup-result').textContent='가져오기 완료. 이전 편집 내용은 before-import JSON 파일로 내려받았습니다.';toast('백업을 가져왔습니다.');}
   catch(err){$('backup-result').textContent='가져오기 실패: '+err.message;toast('백업을 확인하세요. 기존 내용은 유지했습니다.');}
   e.target.value='';
  });
@@ -366,12 +366,12 @@
   const id=card.dataset.booking,input=card.querySelector('[data-cost]'),amount=parseAmount(input.value),currency=card.querySelector('[data-cost-currency]').value;
   if(amount!==null&&!(Number.isFinite(amount)&&amount<=1e12)){toast('금액을 숫자로 입력해 주세요.');input.value=costOf(id)?num(costOf(id).amount):'';return;}
   const next=structuredClone(costs);next.items[id]=amount===null?null:{amount,currency};
-  costs=validateCosts(next);if(!saveCosts())return;
+  costs=validateCosts(next);if(!saveCosts())return;window.PQ_CLOUD?.costsChanged?.(id);
   input.value=amount===null?'':num(amount);$('cost-note-'+id).textContent=costNote(id);renderCosts();
  });
  $('cost-summary').addEventListener('change',e=>{
   const key=e.target.dataset.rate;if(!key)return;const v=parseAmount(e.target.value);
-  try{const next=structuredClone(costs);next.rates[key]=key==='VND'?v/1000:v;costs=validateCosts(next);saveCosts();}catch{toast('환율을 숫자로 입력해 주세요.');}
+  try{const next=structuredClone(costs);next.rates[key]=key==='VND'?v/1000:v;costs=validateCosts(next);saveCosts();window.PQ_CLOUD?.costsChanged?.('rates');}catch{toast('환율을 숫자로 입력해 주세요.');}
   renderBookings();
  });
  function renderDday(){
@@ -380,5 +380,7 @@
  }
  $('photo-credits').innerHTML=Object.values(PH).map(p=>`<li>${credit(p)}</li>`).join('');
  renderDday();restoreNavigation();renderResearch();renderChecks();renderBookings();
+ // Hook for github-sync.js: shared cost records are merged in and saved (encrypted) on the public site.
+ window.PQ_COSTS={get:()=>structuredClone(costs),set:c=>{costs=validateCosts(c);saveCosts();renderBookings();}};
  window.PQ_TEST={validateState,timeWarnings,dayEvents,getLegs,baseline:invariant,getState:()=>structuredClone(state)};
 })();
