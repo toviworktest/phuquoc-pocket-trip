@@ -4,7 +4,7 @@
  "overrides": {},
  "extras": [],
  "checked": {
-  "entry-form": false
+  "entry-form": true
  },
  "dayNotes": {}
 }
