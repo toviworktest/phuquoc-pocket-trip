@@ -71,13 +71,25 @@
   async open(pass,box){const k=await costCrypto.key(pass,box.salt,box.iter);return JSON.parse(td.decode(await crypto.subtle.decrypt({name:'AES-GCM',iv:unb64(box.iv)},k,unb64(box.data))));}
  };
  window.PQ_COST_CRYPTO=costCrypto;
- let costPass='',costSha=null,costBox=null,costTimer=null,costSaving=false,costMsg='',applyingCosts=false;const pending=new Set();
+ let costPass='',costSha=null,costBox=null,costTimer=null,costSaving=false,costMsg='',applyingCosts=false;
+ // Unsynced cost changes survive a reload, so a phone never drops entries it has not uploaded yet.
+ const PENDING_KEY='phuquoc-cost-pending';let pending=new Set();
+ try{pending=new Set(JSON.parse(localStorage.getItem(PENDING_KEY)||'[]').filter(x=>typeof x==='string'));}catch{}
+ const keepPending=()=>{try{pending.size?localStorage.setItem(PENDING_KEY,JSON.stringify([...pending])):localStorage.removeItem(PENDING_KEY);}catch{}};
  try{costPass=localStorage.getItem(COSTPASS_KEY)||'';}catch{}
  function mergeCosts(remote,local){
   const items={...remote.items};for(const [id,v] of Object.entries(local.items))if(!Object.hasOwn(items,id))items[id]=v;
   let rates=remote.rates;
   for(const id of pending){if(id==='*'){Object.assign(items,local.items);rates=local.rates;}else if(id==='rates')rates=local.rates;else if(Object.hasOwn(local.items,id))items[id]=local.items[id];}
-  return {...remote,items,rates};
+  // Trip spending list: remote copy plus this phone's unsynced adds/edits (spend+:id) and deletions (spend-:id).
+  let spend=[...(remote.spend||[])];const localSpend=new Map((local.spend||[]).map(s=>[s.id,s]));
+  for(const id of pending){
+   if(id==='*')spend=[...(local.spend||[])];
+   else if(id.startsWith('spend+:')){const s=localSpend.get(id.slice(7));if(s)spend=[...spend.filter(x=>x.id!==s.id),s];}
+   else if(id.startsWith('spend-:'))spend=spend.filter(x=>x.id!==id.slice(7));
+  }
+  const merged={...remote,items,rates};if(spend.length||remote.spend)merged.spend=spend;else delete merged.spend;
+  return merged;
  }
  async function fetchCostBox(){
   if(canEdit){try{const f=await github(`${repoPath}/contents/${cfg.costsPath}?ref=${encodeURIComponent(cfg.branch)}`);costSha=f.sha;return JSON.parse(decode(f.content));}catch(e){if(e.status===404){costSha=null;return null;}throw e;}}
@@ -103,15 +115,18 @@
   try{
    const box=await costCrypto.seal(costPass,window.PQ_COSTS.get(),costBox?.salt);
    const result=await github(`${repoPath}/contents/${cfg.costsPath}`,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({message:'Update shared trip costs (encrypted)',content:encode(JSON.stringify(box,null,1)+'\n'),...(costSha?{sha:costSha}:{}),branch:cfg.branch})});
-   costSha=result.content.sha;costBox=box;for(const id of sent)pending.delete(id);costMsg='비용 공유 저장됨 ✓ 다른 폰에서 새로고침하면 보여요';
+   costSha=result.content.sha;costBox=box;for(const id of sent)pending.delete(id);keepPending();costMsg='비용 공유 저장됨 ✓ 다른 폰에서 새로고침하면 보여요';
   }catch(e){
    if((e.status===409||e.status===422)&&retry){costSaving=false;costTimer=null;await loadCosts();return saveCosts(false);}
    costMsg='비용을 공유 저장하지 못했어요. 이 기기에는 남아 있어요. ('+e.message+')';
   }finally{costSaving=false;renderCostSync();}
  }
- function costsChanged(id='*'){if(applyingCosts)return;pending.add(id);if(canEdit&&costPass&&loaded)scheduleCostSave();else renderCostSync();}
+ function costsChanged(id='*'){if(applyingCosts)return;pending.add(id);keepPending();if(canEdit&&costPass&&loaded)scheduleCostSave();else renderCostSync();}
+ // A phone that reads shared costs without a GitHub token cannot save them, so spending edits are disabled there.
+ const costsReadOnly=()=>!!costPass&&!canEdit;let lastReadOnly=null;
  function renderCostSync(){
   const box=$('cost-sync');if(!box||!window.PQ_COSTS)return;box.hidden=false;
+  if(lastReadOnly!==costsReadOnly()){lastReadOnly=costsReadOnly();window.PQ_COSTS.refresh?.();}
   const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   if(costPass)box.innerHTML=`<p class="cost-sync-title">🔒 비용 공유 중 · 두 폰에서 같이 봐요</p><p class="cost-sync-msg" role="status">${esc(costMsg||'암호화해서 저장돼요.')}</p><button type="button" class="btn" data-cost-forget>이 폰에서 비용 암호 지우기</button>`;
   else if(costBox)box.innerHTML=`<p class="cost-sync-title">다른 폰에서 공유한 비용이 있어요</p><form class="cost-sync-form" data-cost-open><div class="cost-input"><input type="password" autocomplete="off" placeholder="비용 암호" aria-label="비용 암호" required><button class="primary shrink-0">열기</button></div></form><p class="cost-sync-msg" role="status">${esc(costMsg)}</p>`;
@@ -123,9 +138,9 @@
   if(confirmPass!==undefined&&pass!==confirmPass){costMsg='두 암호가 달라요.';return renderCostSync();}
   if(costBox){try{await costCrypto.open(pass,costBox);}catch{costMsg='비용 암호가 맞지 않아요.';return renderCostSync();}}
   costPass=pass;try{localStorage.setItem(COSTPASS_KEY,pass);}catch{}
-  if(!costBox)pending.add('*');costMsg='';await loadCosts();if(!costBox&&canEdit)await saveCosts();
+  if(!costBox){pending.add('*');keepPending();}costMsg='';await loadCosts();if(!costBox&&canEdit)await saveCosts();
  }
- window.PQ_CLOUD={canEdit:()=>loaded&&canEdit&&!busy&&!blocked,save:markDirty,refreshControls,costsChanged};
+ window.PQ_CLOUD={canEdit:()=>loaded&&canEdit&&!busy&&!blocked,save:markDirty,refreshControls,costsChanged,costsReadOnly};
  window.addEventListener('DOMContentLoaded',async()=>{
   $('cloud-save').onclick=saveShared;
   $('account-open').hidden=false;

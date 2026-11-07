@@ -4,10 +4,10 @@ import fs from 'node:fs/promises';
 import vm from 'node:vm';
 const root=new URL('../',import.meta.url);
 async function planner(stored=null){
- const els={},context={window:{},structuredClone,URL,localStorage:{getItem:key=>key==='phuquoc-costs-2026-v1'?stored:null},document:{getElementById:id=>els[id]??={}},pixelIcon:()=>''};
+ const els={},context={window:{},structuredClone,URL,localStorage:{getItem:key=>key==='phuquoc-costs-2026-v1'?stored:null,setItem(){}},document:{getElementById:id=>els[id]??={}},pixelIcon:()=>''};
  vm.createContext(context);for(const name of ['data.js','bookings.js','geometry.js','photos.js'])vm.runInContext(await fs.readFile(new URL(name,root),'utf8'),context);
  const app=await fs.readFile(new URL('app.js',root),'utf8');
- vm.runInContext(app.slice(0,app.indexOf(" $('date-nav').addEventListener"))+' window.fixture={validateCosts,emptyCosts,costOf,bookingItems,renderBookings,getCosts:()=>costs};})();',context);
+ vm.runInContext(app.slice(0,app.indexOf(" $('date-nav').addEventListener"))+' window.fixture={validateCosts,emptyCosts,costOf,bookingItems,renderBookings,importSpend,getCosts:()=>costs};})();',context);
  return {api:context.window.fixture,R:context.window.PQ_BOOKINGS,P:context.window.PQ_PHOTOS,els};
 }
 
@@ -49,4 +49,23 @@ test('Every place photo is a small local WebP with Commons attribution and a fre
  for(const [,key] of app.matchAll(/:'([a-z]+)'/g))if(['flight','airport','beach','safari','wonders','grand','cable','aqua','sunsettown','kissbridge','kissshow','nighttown','kem','anthoi','duong','sunset'].includes(key))assert(P[key],'missing photo '+key);
  const built=await fs.readFile(new URL('publish/index.html',root),'utf8');
  assert(!built.includes('assets/photos/'));assert(built.includes('data:image/webp;base64,'));
+});
+
+test('Trip spending is validated, imported idempotently and added to the trip total',async()=>{
+ const {api,els}=await planner();
+ const item=(id,amount,extra={})=>({id,date:'2026-11-05',title:'점심',category:'식당·카페',method:'현금',amount,currency:'VND',...extra});
+ const ok=api.emptyCosts();ok.spend=[item('sp-a',475000,{time:'13:41'}),item('sp-b',138000,{note:'카페'})];
+ assert.equal(api.validateCosts(ok).spend.length,2);
+ for(const bad of [[item('sp-a',1),item('sp-a',2)],[item('sp-x',1,{category:'술집'})],[item('sp-x',1,{method:'포인트'})],[item('sp-x',-1)],[item('SP X',1)],[item('sp-x',1,{date:'2025-01-01'})],[item('sp-x',1,{time:'25:00'})],[item('sp-x',1,{extra:true})]])
+  assert.throws(()=>api.validateCosts({...api.emptyCosts(),spend:bad}));
+ const file=JSON.stringify({rates:{VND:0.0536},spend:[item('sp-1',650000),item('sp-2',1350000)]});
+ const first=api.importSpend(file);assert.equal(first.added,2);assert.equal(first.updated,0);
+ const again=api.importSpend(file);assert.equal(again.added,0);assert.equal(again.updated,2);
+ assert.equal(api.getCosts().spend.length,2);assert.equal(api.getCosts().rates.VND,0.0536);
+ assert.throws(()=>api.importSpend('not json'));assert.throws(()=>api.importSpend('{"spend":[]}'));
+ api.renderBookings();const html=els['cost-summary'].innerHTML;
+ assert(html.includes('여행 중 지출'));assert(html.includes('2건 · 200.0만동'));
+ // 2,000,000동 × 0.0536 = 107,200원 spending + YUJU listed 1,500,000동 × 0.0536 = 80,400원 booking.
+ assert(html.includes('107,200원'));assert(html.includes('80,400원'));assert(html.includes('187,600원'));
+ assert(els.spend.innerHTML.includes('11/5 (목)'));assert(!els.spend.innerHTML.includes('undefined'));
 });

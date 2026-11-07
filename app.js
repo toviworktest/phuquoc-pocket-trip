@@ -242,8 +242,12 @@
  // never part of the shared planner_state or the public page) and included in JSON backups.
  const COST_KEY='phuquoc-costs-2026-v1',currencies=['KRW','VND','USD'];
  const emptyCosts=()=>({v:1,items:{},rates:{USD:1400,VND:0.055}});
+ // Spending during the trip (meals, massage, shopping…): optional `spend` list next to the booking costs.
+ const spendCats=['식당·카페','마사지','쇼핑','편의점·간식','교통','세탁·생활','입장·시설','기타'],spendMethods=['카드','G머니','현금','기타'];
+ const validSpend=s=>safeObject(s)&&Object.keys(s).every(k=>['id','date','time','title','category','method','amount','currency','note'].includes(k))&&typeof s.id==='string'&&/^sp-[a-z0-9-]{1,40}$/.test(s.id)&&typeof s.date==='string'&&/^2026-1[01]-[0-3]\d$/.test(s.date)&&(s.time===undefined||(typeof s.time==='string'&&/^([01]\d|2[0-3]):[0-5]\d$/.test(s.time)))&&textValue(s.title,80)&&!!s.title.trim()&&spendCats.includes(s.category)&&spendMethods.includes(s.method)&&Number.isFinite(s.amount)&&s.amount>=0&&s.amount<=1e12&&currencies.includes(s.currency)&&(s.note===undefined||textValue(s.note,200));
  function validateCosts(c){
-  assert(safeObject(c)&&c.v===1&&safeObject(c.items)&&safeObject(c.rates)&&Object.keys(c).every(k=>['v','items','rates'].includes(k)),'비용 기록 형식을 확인하세요.');
+  assert(safeObject(c)&&c.v===1&&safeObject(c.items)&&safeObject(c.rates)&&Object.keys(c).every(k=>['v','items','rates','spend'].includes(k)),'비용 기록 형식을 확인하세요.');
+  if(c.spend!==undefined){assert(Array.isArray(c.spend)&&c.spend.length<=500&&c.spend.every(validSpend),'지출 기록을 확인하세요.');assert(new Set(c.spend.map(s=>s.id)).size===c.spend.length,'지출 기록이 중복됐어요.');}
   const ids=new Set(bookingItems().map(b=>b.id));
   for(const [id,item] of Object.entries(c.items)){
    assert(ids.has(id),'알 수 없는 예약의 비용입니다.');
@@ -271,10 +275,41 @@
   const c=costOf(b.id);
   return `<div class="cost-field"><label for="cost-${esc(b.id)}">${b.kind==='flight'?'항공권 금액 · 왕복 결제면 한쪽에만':'결제 금액'}</label><div class="cost-input"><input id="cost-${esc(b.id)}" data-cost="${esc(b.id)}" inputmode="decimal" autocomplete="off" placeholder="금액 입력" value="${c?num(c.amount):''}" aria-describedby="cost-note-${esc(b.id)}"><select data-cost-currency="${esc(b.id)}" aria-label="${esc(b.title)} 통화">${currencies.map(x=>`<option ${(c?.currency||'KRW')===x?'selected':''}>${x}</option>`).join('')}</select></div><small id="cost-note-${esc(b.id)}">${esc(costNote(b.id))}</small></div>`;
  }
+ const spendList=()=>[...(costs.spend||[])].sort((a,b)=>(a.date+(a.time||'99:99')).localeCompare(b.date+(b.time||'99:99')));
+ const manDong=v=>(Math.round(v/1000)/10).toLocaleString('ko-KR',{minimumFractionDigits:1,maximumFractionDigits:1})+'만동';
+ const sumBy=(list,key)=>list.reduce((m,s)=>{m.set(s[key],(m.get(s[key])||0)+toKRW(s));return m;},new Map());
  function renderCosts(){
-  const rows=bookingItems().map(b=>({b,c:costOf(b.id)})),entered=rows.filter(r=>r.c),foreign=entered.some(r=>r.c.currency!=='KRW');
-  const total=Math.round(entered.reduce((s,r)=>s+toKRW(r.c),0)),open=new Set([...($('cost-summary').querySelectorAll?.('details[open]')||[])].map(d=>d.dataset.part));
-  $('cost-summary').innerHTML=`<p class="cost-label">확정 예약에 쓴 금액</p><strong class="cost-total">${entered.length?(foreign?'약 ':'')+num(total)+'원':'아직 입력 전'}</strong><p class="cost-sub">${rows.length}건 중 ${entered.length}건 입력${foreign?' · 외화는 환율 설정으로 환산':''} · 금액은 공개 페이지에 보이지 않아요. 각 예약 카드에서 입력해요.</p><details class="cost-rates" data-part="rows" ${open.has('rows')?'open':''}><summary>항목별 금액 보기 <span aria-hidden="true">+</span></summary><div class="cost-rows">${rows.map(r=>`<div class="cost-row"><span>${esc(r.b.title)}</span>${r.c?`<b>${esc(money(r.c))}</b>`:'<b class="empty">미입력</b>'}</div>`).join('')}</div></details><details class="cost-rates" data-part="rates" ${open.has('rates')?'open':''}><summary>환율 설정 · 대략값 <span aria-hidden="true">+</span></summary><label>1 USD<span><input data-rate="USD" inputmode="decimal" value="${num(costs.rates.USD)}" aria-label="1달러당 원화"> 원</span></label><label>1,000 VND<span><input data-rate="VND" inputmode="decimal" value="${num(costs.rates.VND*1000)}" aria-label="1,000동당 원화"> 원</span></label></details>`;
+  const rows=bookingItems().map(b=>({b,c:costOf(b.id)})),entered=rows.filter(r=>r.c),spend=spendList();
+  const foreign=entered.some(r=>r.c.currency!=='KRW')||spend.some(s=>s.currency!=='KRW');
+  const bookingTotal=Math.round(entered.reduce((s,r)=>s+toKRW(r.c),0)),spendTotal=Math.round(spend.reduce((s,x)=>s+toKRW(x),0)),total=bookingTotal+spendTotal;
+  const spendVnd=spend.filter(s=>s.currency==='VND').reduce((s,x)=>s+x.amount,0),open=new Set([...($('cost-summary').querySelectorAll?.('details[open]')||[])].map(d=>d.dataset.part));
+  const breakdown=(title,map)=>`<p class="cost-group">${title}</p>`+[...map].sort((a,b)=>b[1]-a[1]).map(([k,v])=>`<div class="cost-row"><span>${esc(k)}</span><b>${num(Math.round(v))}원</b></div>`).join('');
+  $('cost-summary').innerHTML=`<p class="cost-label">여행 총 비용</p><strong class="cost-total">${entered.length||spend.length?(foreign?'약 ':'')+num(total)+'원':'아직 입력 전'}</strong><div class="cost-split"><div><small>확정 예약</small><b>${num(bookingTotal)}원</b><small>${rows.length}건 중 ${entered.length}건 입력</small></div><div><small>여행 중 지출</small><b>${num(spendTotal)}원</b><small>${spend.length}건${spendVnd?' · '+manDong(spendVnd):''}</small></div></div><p class="cost-sub">${foreign?'외화는 환율 설정으로 환산 · ':''}금액은 공개 페이지에 보이지 않아요.</p><details class="cost-rates" data-part="rows" ${open.has('rows')?'open':''}><summary>예약별 금액 보기 <span aria-hidden="true">+</span></summary><div class="cost-rows">${rows.map(r=>`<div class="cost-row"><span>${esc(r.b.title)}</span>${r.c?`<b>${esc(money(r.c))}</b>`:'<b class="empty">미입력</b>'}</div>`).join('')}</div></details>${spend.length?`<details class="cost-rates" data-part="spend" ${open.has('spend')?'open':''}><summary>지출 분류별 · 결제수단별 <span aria-hidden="true">+</span></summary><div class="cost-rows">${breakdown('분류별',sumBy(spend,'category'))}${breakdown('결제수단별',sumBy(spend,'method'))}</div></details>`:''}<details class="cost-rates" data-part="rates" ${open.has('rates')?'open':''}><summary>환율 설정 · 대략값 <span aria-hidden="true">+</span></summary><label>1 USD<span><input data-rate="USD" inputmode="decimal" value="${num(costs.rates.USD)}" aria-label="1달러당 원화"> 원</span></label><label>1,000 VND<span><input data-rate="VND" inputmode="decimal" value="${num(costs.rates.VND*1000)}" aria-label="1,000동당 원화"> 원</span></label></details>`;
+  renderSpend();
+ }
+ // Trip spending list: grouped by day, editable unless this phone only views shared costs.
+ let spendEditing=null;
+ const tripDays=B.days.map(d=>d.id);
+ function renderSpend(){
+  const box=$('spend');if(!box)return;
+  const readOnly=!!window.PQ_CLOUD?.costsReadOnly?.(),spend=spendList(),open=new Set([...(box.querySelectorAll?.('details[open]')||[])].map(d=>d.dataset.part));
+  const edit=spendEditing&&spend.find(s=>s.id===spendEditing),days=[...new Set(spend.map(s=>s.date))];
+  const dayLabel=d=>{const day=B.days.find(x=>x.id===d);return `${Number(d.slice(5,7))}/${Number(d.slice(8))}${day?' ('+day.weekday+')':''}`;};
+  const options=(list,value)=>list.map(x=>`<option ${x===value?'selected':''}>${esc(x)}</option>`).join('');
+  const form=`<details class="spend-panel" data-part="add" ${edit||open.has('add')?'open':''}><summary>${edit?'지출 수정':'+ 지출 추가'}</summary><form id="spend-form" class="spend-form"><div class="spend-grid"><label>날짜<select name="date">${tripDays.map(d=>`<option value="${d}" ${(edit?.date||tripDays.find(x=>x>=new Date().toISOString().slice(0,10))||tripDays.at(-1))===d?'selected':''}>${dayLabel(d)}</option>`).join('')}</select></label><label>시간 (선택)<input name="time" type="time" value="${esc(edit?.time||'')}"></label></div><label>내용<input name="title" maxlength="80" required placeholder="예: 야시장 해산물" value="${esc(edit?.title||'')}"></label><div class="spend-grid"><label>분류<select name="category">${options(spendCats,edit?.category||'식당·카페')}</select></label><label>결제<select name="method">${options(spendMethods,edit?.method||'현금')}</select></label></div><label>금액<div class="cost-input"><input name="amount" inputmode="decimal" required placeholder="금액" value="${edit?num(edit.amount):''}"><select name="currency" aria-label="통화">${options(currencies,edit?.currency||'VND')}</select></div></label><label>메모 (선택)<input name="note" maxlength="200" value="${esc(edit?.note||'')}"></label><div class="actions"><button type="submit" class="primary">${edit?'수정 저장':'추가'}</button>${edit?'<button type="button" class="secondary" data-spend-cancel>취소</button><button type="button" class="danger" data-spend-delete>삭제</button>':''}</div></form></details>`;
+  const importer=`<details class="spend-panel" data-part="import" ${open.has('import')?'open':''}><summary>지출 가져오기 · 파일 또는 붙여넣기</summary><div class="spend-form"><textarea id="spend-import-text" rows="3" placeholder="가져오기 파일 내용을 붙여넣어도 돼요"></textarea><div class="actions"><button type="button" class="primary" data-spend-import>붙여넣은 내용 가져오기</button><button type="button" class="secondary" data-spend-file>파일 선택</button><input id="spend-import-file" type="file" accept="application/json,.json,.txt" hidden></div><p class="muted">같은 지출(같은 ID)은 덮어써서 여러 번 가져와도 두 번 더해지지 않아요.</p></div></details>`;
+  box.innerHTML=`<div class="spend-head"><h3>여행 중 지출</h3><span>${spend.length}건 · 약 ${num(Math.round(spend.reduce((s,x)=>s+toKRW(x),0)))}원</span></div>${readOnly?'<p class="muted">이 폰은 보기 전용이에요. 지출 추가·수정은 편집 연결한 폰에서 해요.</p>':form+importer}${days.length?days.map(d=>{const list=spend.filter(s=>s.date===d),vnd=list.filter(s=>s.currency==='VND').reduce((s,x)=>s+x.amount,0);return `<section class="spend-day"><h4><span>${dayLabel(d)}</span><small>${vnd?manDong(vnd)+' · ':''}약 ${num(Math.round(list.reduce((s,x)=>s+toKRW(x),0)))}원</small></h4><ul>${list.map(s=>`<li><button type="button" ${readOnly?'disabled':''} data-spend-edit="${esc(s.id)}"><span class="spend-main"><strong>${esc(s.title)}</strong><small>${esc(s.category)} · ${esc(s.method)}${s.time?' · '+esc(s.time):''}${s.note?' · '+esc(s.note):''}</small></span><b>${esc(money(s))}</b></button></li>`).join('')}</ul></section>`;}).join(''):'<p class="muted">아직 기록한 지출이 없어요.</p>'}`;
+ }
+ function importSpend(text){
+  let data;try{data=JSON.parse(text);}catch{throw Error('가져오기 내용을 읽지 못했어요. 파일 내용을 그대로 붙여넣어 주세요.');}
+  const list=Array.isArray(data)?data:data?.spend;assert(Array.isArray(list)&&list.length,'가져올 지출이 없어요.');
+  const next=structuredClone(costs),byId=new Map((next.spend||[]).map(s=>[s.id,s]));let added=0,updated=0;
+  for(const s of list){assert(validSpend(s),'지출 항목 형식을 확인하세요: '+(s?.title||s?.id||''));byId.has(s.id)?updated++:added++;byId.set(s.id,structuredClone(s));}
+  next.spend=[...byId.values()];
+  const rateVnd=data?.rates?.VND;if(rateVnd!==undefined)next.rates.VND=rateVnd;
+  costs=validateCosts(next);if(!saveCosts())return null;
+  for(const s of list)window.PQ_CLOUD?.costsChanged?.('spend+:'+s.id);if(rateVnd!==undefined)window.PQ_CLOUD?.costsChanged?.('rates');
+  return {added,updated,rate:rateVnd};
  }
  const parseAmount=v=>{const t=String(v).replace(/[^\d.]/g,'');return t===''?null:Number(t);};
  function readNavigation(search){
@@ -374,6 +409,30 @@
   try{const next=structuredClone(costs);next.rates[key]=key==='VND'?v/1000:v;costs=validateCosts(next);saveCosts();window.PQ_CLOUD?.costsChanged?.('rates');}catch{toast('환율을 숫자로 입력해 주세요.');}
   renderBookings();
  });
+ function runImport(text){try{const r=importSpend(text);if(!r)return;toast(`지출 ${r.added}건 추가 · ${r.updated}건 갱신${r.rate?` · 환율 1만동 ${num(Math.round(r.rate*10000))}원`:''}`);$('spend-import-text')&&($('spend-import-text').value='');renderCosts();}catch(err){toast(err.message);}}
+ $('spend').addEventListener('submit',e=>{
+  if(e.target.id!=='spend-form')return;e.preventDefault();
+  const f=new FormData(e.target),amount=parseAmount(f.get('amount'));
+  if(amount===null||!Number.isFinite(amount)){toast('금액을 숫자로 입력해 주세요.');return;}
+  const item={id:spendEditing||'sp-'+Date.now().toString(36)+'-'+Math.random().toString(36).slice(2,6),date:String(f.get('date')),title:String(f.get('title')).trim(),category:String(f.get('category')),method:String(f.get('method')),amount,currency:String(f.get('currency'))};
+  const time=String(f.get('time')||''),note=String(f.get('note')||'').trim();if(time)item.time=time;if(note)item.note=note;
+  try{const next=structuredClone(costs);next.spend=[...(next.spend||[]).filter(s=>s.id!==item.id),item];costs=validateCosts(next);}catch(err){toast(err.message);return;}
+  if(!saveCosts())return;window.PQ_CLOUD?.costsChanged?.('spend+:'+item.id);
+  toast(spendEditing?'지출을 수정했어요.':'지출을 추가했어요.');spendEditing=null;$('spend').querySelector('[data-part="add"]')?.removeAttribute('open');renderCosts();
+ });
+ $('spend').addEventListener('click',e=>{
+  const t=e.target,editBtn=t.closest('[data-spend-edit]');
+  if(editBtn){spendEditing=editBtn.dataset.spendEdit;renderSpend();$('spend-form')?.scrollIntoView({block:'center'});return;}
+  if(t.closest('[data-spend-cancel]')){spendEditing=null;$('spend').querySelector('[data-part="add"]')?.removeAttribute('open');renderSpend();return;}
+  if(t.closest('[data-spend-delete]')){
+   const id=spendEditing;if(!id||!confirm('이 지출을 삭제할까요?'))return;
+   const next=structuredClone(costs);next.spend=(next.spend||[]).filter(s=>s.id!==id);costs=validateCosts(next);if(!saveCosts())return;
+   window.PQ_CLOUD?.costsChanged?.('spend-:'+id);spendEditing=null;$('spend').querySelector('[data-part="add"]')?.removeAttribute('open');toast('지출을 삭제했어요.');renderCosts();return;
+  }
+  if(t.closest('[data-spend-file]')){$('spend-import-file').click();return;}
+  if(t.closest('[data-spend-import]'))runImport($('spend-import-text').value);
+ });
+ $('spend').addEventListener('change',async e=>{if(e.target.id!=='spend-import-file')return;const f=e.target.files[0];if(f&&f.size<1_000_000)runImport(await f.text());else if(f)toast('1MB 이하 파일만 가져올 수 있어요.');e.target.value='';});
  function renderDday(){
   const now=Date.now(),start=Date.parse('2026-11-03T00:00:00+09:00'),end=Date.parse('2026-11-10T00:00:00+09:00'),days=Math.ceil((start-now)/864e5);
   $('dday').textContent=now>=end?'다녀왔어요':now>=start?'여행 중':days<=0?'D-DAY':'D-'+days;
@@ -381,6 +440,6 @@
  $('photo-credits').innerHTML=Object.values(PH).map(p=>`<li>${credit(p)}</li>`).join('');
  renderDday();restoreNavigation();renderResearch();renderChecks();renderBookings();
  // Hook for github-sync.js: shared cost records are merged in and saved (encrypted) on the public site.
- window.PQ_COSTS={get:()=>structuredClone(costs),set:c=>{costs=validateCosts(c);saveCosts();renderBookings();}};
+ window.PQ_COSTS={get:()=>structuredClone(costs),set:c=>{costs=validateCosts(c);saveCosts();renderBookings();},refresh:()=>renderCosts()};
  window.PQ_TEST={validateState,timeWarnings,dayEvents,getLegs,baseline:invariant,getState:()=>structuredClone(state)};
 })();
